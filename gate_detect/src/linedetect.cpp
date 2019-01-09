@@ -74,7 +74,7 @@ int main( int argc, char** argv ) {
 	while(video.read(frame))
 	{	
 		// Start timer
-        	double timer = (double)getTickCount();
+        double timer = (double)getTickCount();
 
 
 		/////// DETECT LINES ///////
@@ -339,52 +339,60 @@ Mat tracker_update(Mat frame)
 }
  
 
-
-/*
-vector<Vec4i> filter_lines(vector<Vec4i> lines){
-	vector<Vec4i> lines_filtered;
-	int height, height_new, width, width_new ;
-
-	//iterate through every detected line
-	for( size_t i = 0; i < lines.size(); i++ )
-	{		
-		Vec4i l_new = lines[i];
-		height_new = abs(l_new[3]-l_new[1]);
-		width_new = abs(l_new[2]-l_new[0]);
-		
-		//dissmiss those that are not vertical
-		if (width_new < 10)
-		{		
-
-			//make sure there are at least 4 objects in the list
-			if (lines_filtered.size() == 0)
-				lines_filtered.insert(lines_filtered.begin(), l_new);
-
-			//Iterate through the four highest lines
-			vector<Vec4i>::iterator it = lines_filtered.begin();
-			for (it; it < lines_filtered.end(); it++)
-			{
-				Vec4i l = *it;
-				height = abs(l[3]-l[1]);
-
-				//Find (if possible) position of highest line and insert 
-				//before. Remove shortest
-				if (height < height_new)
-				{
-					lines_filtered.insert(it, l_new);
-
-					if (lines_filtered.size() > 4)
-						lines_filtered.pop_back();
-					
-					//Prevent infitite loop
-					break;					
-				}
-			}
-		}
+vector<Vec4i> buffer_lines(vector<Vec4i> lines, vector<Vec4i> lines_buffered){
+	vector<Vec4i> lines_sorted;	
+	Vec4i line, line_buf;	
+	
+	//check if empty
+	if (lines_buffered.size() < 4)
+	{	
+		return lines;
 	}
+	
+	if (lines_buffered.size() != lines.size())
+	{	
+		return lines_buffered;
+	}
+	
+	vector<Vec4i>::iterator it = lines.begin();
+	vector<Vec4i>::iterator it_buf = lines_buffered.begin();
+	int count = 0;
+	for (it; it < lines.end(); it++)
+	{
+		line = *it;
+		line_buf = *it_buf;
 
-	return lines_filtered;
+		if (abs(line[1] - line[3]) > abs(line_buf[1] - line_buf[3]))
+		{
+			/*			
+			cout << "Before:" << endl;
+			vector<Vec4i>::iterator it_buf2 = lines_buffered.begin();
+			for (it_buf2; it_buf2 < lines.end(); it_buf2++)
+			{
+				line = *it_buf2;
+				cout << line[0] << endl;
+			}
+			*/
+
+			lines_buffered.erase(lines_buffered.begin()+count);
+			it_buf = lines_buffered.insert(it_buf, line);
+
+			/*
+			cout << "After:" << endl;
+			it_buf2 = lines_buffered.begin();
+			for (it_buf2; it_buf2 < lines.end(); it_buf2++)
+			{
+				line = *it_buf2;
+				cout << line[0] << endl;
+			}
+			*/
+		}
+		it_buf++;
+		count++;	
+	}	
+		
+	return lines_buffered;
 }
-*/
+
 
 
