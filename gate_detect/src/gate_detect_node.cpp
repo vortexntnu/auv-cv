@@ -22,7 +22,8 @@
 #include <stdlib.h>
 #include <vector>
 #include <algorithm> 
-#include "std_msgs/String.h"
+#include "std_msgs/Bool.h"
+//#include "std_msgs/String.h"
 #include <sstream>
 
 using namespace cv;
@@ -41,75 +42,6 @@ Mat frame;
 Mat frame_converted;
 
 static const std::string OPENCV_WINDOW = "Image window";
-/*
-class ImageConverter
-{
-  ros::NodeHandle nh_;
-  image_transport::ImageTransport it_;
-  image_transport::Subscriber image_sub_;
-  image_transport::Publisher image_pub_;
-
-public:
-  ImageConverter()
-    : it_(nh_)
-  {
-    // Subscrive to input video feed and publish output video feed
-    image_sub_ = it_.subscribe("/camera/image", 1,
-      &ImageConverter::imageCb, this);
-    image_pub_ = it_.advertise("/image_converter/output_video", 1);
-
-    namedWindow(OPENCV_WINDOW);
-  }
-
-  ~ImageConverter()
-  {
-    destroyWindow(OPENCV_WINDOW);
-  }
-
-  void imageCb(const sensor_msgs::ImageConstPtr& msg)
-  {
-    cv_bridge::CvImagePtr cv_ptr;
-    try
-    {
-      cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
-    }
-    catch (cv_bridge::Exception& e)
-    {
-      ROS_ERROR("cv_bridge exception: %s", e.what());
-      return;
-    }
-		
-		///////////////////////// CODE ////////////////////////////
-
-		/// Convert color of image
-		frame_converted = convert_frame(cv_ptr);			
-
-		// Probabilistic Line Transform
-	  vector<Vec4i> lines; // will hold the results of the detection
-	  HoughLinesP(frame_converted, lines, 1, CV_PI/180, 50, 50, 10 ); // runs the actual detection
-		
-		//Filter out lines that doesn't mach desired output
-		lines_filtered = filter_lines(lines);
-		
-	    // Draw the lines
-	  for( size_t i = 0; i < lines_filtered.size(); i++ )
-	  {	
-			Vec4i l = lines_filtered[i];
-			line( frame_converted, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0,0,255), 2, LINE_AA);
-	  }
-
-		///////////////////////// END CODE ////////////////////////////
-
-		
-    // Update GUI Window
-		imshow(OPENCV_WINDOW, frame_converted);
-    waitKey(3);
-
-    // Output modified video stream
-    image_pub_.publish(cv_ptr->toImageMsg());
-  }
-};
-*/
 
 class ImageConverter
 {
@@ -125,7 +57,7 @@ public:
     // Subscrive to input video feed and publish output video feed
     image_sub_ = it_.subscribe("/camera/image", 1,
       &ImageConverter::imageCb, this);
-    detect_pub_ = nh_.advertise<std_msgs::String>("chatter", 1000);
+    detect_pub_ = nh_.advertise<std_msgs::Bool>("chatter", 1000);
 
     namedWindow(OPENCV_WINDOW);
   }
@@ -148,7 +80,7 @@ public:
       return;
     }
 		
-		///////////////////////// CODE ////////////////////////////
+		///////////////////////// CV ////////////////////////////
 
 		/// Convert color of image
 		frame_converted = convert_frame(cv_ptr);			
@@ -167,31 +99,27 @@ public:
 			line( frame_converted, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0,0,255), 2, LINE_AA);
 	  }
 
-		///////////////////////// END CODE ////////////////////////////
+		///////////////////////// END CV ////////////////////////////
 
 		
     // Update GUI Window
 		imshow(OPENCV_WINDOW, frame_converted);
     waitKey(3);
 
+		///////////////////////// PUBLISH ////////////////////////////
+
     // Output modified video stream
-    //image_pub_.publish(cv_ptr->toImageMsg());
-		int count = 0;
-		std_msgs::String message;
+		std_msgs::Bool detected;
+		detected.data = false;
 
-    std::stringstream ss;
-    ss << "hello world " << count;
-    message.data = ss.str();
+		if (lines_filtered.size() != 0)
+			detected.data = true;
 
-    ROS_INFO("%s", message.data.c_str());
+		ROS_INFO("%d", detected.data);
+    detect_pub_.publish(detected);
 
-    /**
-     * The publish() function is how you send messages. The parameter
-     * is the message object. The type of this object must agree with the type
-     * given as a template parameter to the advertise<>() call, as was done
-     * in the constructor above.
-     */
-    detect_pub_.publish(message);
+		///////////////////////// END PUBLISH ////////////////////////////
+
   }
 };
 
