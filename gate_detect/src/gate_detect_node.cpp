@@ -57,7 +57,7 @@ public:
     // Subscrive to input video feed and publish output video feed
     image_sub_ = it_.subscribe("/camera/image", 1,
       &ImageConverter::imageCb, this);
-    detect_pub_ = nh_.advertise<std_msgs::Bool>("chatter", 1000);
+    detect_pub_ = nh_.advertise<std_msgs::Bool>("detected_line", 1000);
 
     namedWindow(OPENCV_WINDOW);
   }
