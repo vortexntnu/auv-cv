@@ -154,9 +154,9 @@ int main(int argc, char** argv)
   image_transport::Publisher pub = it.advertise("camera/image", 1);
 
   // Convert the passed as command line parameter index for the video device to an integer
-  const char* src = "/home/hellum/Videos/GOPR1142.avi";
+  //const char* src = "/home/hellum/Videos/GOPR1142.avi";
 
-  cv::VideoCapture cap(src);
+  cv::VideoCapture cap(0);
   // Check if video device can be opened with the given index
   if(!cap.isOpened()) return 1;
   cv::Mat frame;
