@@ -33,31 +33,69 @@ using namespace std;
 
 int main(int argc, char** argv)
 {
-  ros::init(argc, argv, "image_publisher");
-  ros::NodeHandle nh;
-  image_transport::ImageTransport it(nh);
-  image_transport::Publisher pub = it.advertise("camera/image", 1);
-
-  // Convert the passed as command line parameter index for the video device to an integer
-  const char* src = "/home/hellum/Videos/GOPR1142.avi";
-
-  cv::VideoCapture cap(src);
-  // Check if video device can be opened with the given index
-  if(!cap.isOpened()) return 1;
-  cv::Mat frame;
-  sensor_msgs::ImagePtr msg;
-
-  ros::Rate loop_rate(30);
-  while (nh.ok()) {
-    cap >> frame;
-    // Check if grabbed frame is actually full with some content
-    if(!frame.empty()) {
-      msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", frame).toImageMsg();
-      pub.publish(msg);
-      cv::waitKey(1);
+    // Check if video source has been passed as a parameter
+    if(argv[1] == NULL){
+        std::cout << "Please provide a video source" << std::endl;
+        return 1;
     }
 
-    ros::spinOnce();
-    loop_rate.sleep();
-  }
+    ros::init(argc, argv, "image_publisher");
+    ros::NodeHandle nh;
+    image_transport::ImageTransport it(nh);
+    image_transport::Publisher pub = it.advertise("camera/image", 1);
+
+    // Convert the passed as command line parameter index for the video device to an integer
+    std::istringstream video_sourceCmd(argv[1]);
+    int video_source;
+
+    // Check if it is indeed a number
+    if(!(video_sourceCmd >> video_source)){
+        std::cout << "Wrong input" << std::endl;
+        return 1;
+    }
+
+
+
+    cv::VideoCapture cap(video_source);
+    string name = std::getenv("USER");
+    switch(video_source){
+        case 2:
+            cap.open("/home/"+name+"/Videos/pipe_dock/GOPR5068.MP4");
+            break;
+        case 3:
+            cap.open("/home/"+name+"/Videos/pipe_dock/real_pipe1.mp4");
+            break;
+        case 4:
+            cap.open("/home/"+name+"/Videos/guide_posts.mp4");
+            break;
+        case 5:
+            if(argv[2] == NULL){
+              std::cout << "Please provide a video source" << std::endl;
+              return 1;
+            }
+            string video = argv[2];
+            cap.open("/home/"+name+"/Videos/"+video);
+            break;
+    }
+    // Check if video device can be opened with the given index
+    if(!cap.isOpened()){
+        std::cout << "Could not open cap" << std::endl;
+        return 1;
+    }
+    cv::Mat frame;
+    sensor_msgs::ImagePtr msg;
+
+    ros::Rate loop_rate(30);
+    while (nh.ok()) {
+        cap >> frame;
+        // Check if grabbed frame is actually full with some content
+        if(!frame.empty()) {
+            msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", frame).toImageMsg();
+            pub.publish(msg);
+            cv::waitKey(1);
+        }
+
+        ros::spinOnce();
+        loop_rate.sleep();
+    }
 }
