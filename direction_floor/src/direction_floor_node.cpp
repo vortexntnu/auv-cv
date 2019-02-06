@@ -1,4 +1,4 @@
-#include<direction_floor/SlidingWindowMemory.h>
+#include <direction_floor/SlidingWindowMemory.h>
 #include <ros/ros.h>
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
@@ -13,11 +13,22 @@
 #include <sstream>
 #include <string>
 #include <fstream>
+#include <vector>
+#include <stdio.h>
+#include <stdlib.h>
+#include <algorithm> 
+#include "std_msgs/Int8.h"
+
+
 
 using namespace std;
 using namespace cv;
 
 static const std::string OPENCV_WINDOW = "Image window";
+
+bool compareByLength(Vec4i &a, Vec4i &b);
+double distance_between_two_points(Vec4i& line);
+
 
 class ImageConverter
 {
@@ -65,46 +76,42 @@ public:
 	{
 		cv::destroyWindow(OPENCV_WINDOW);
 	}
+	
 
 	void imageCb(const sensor_msgs::ImageConstPtr& msg)
   	{
 		cv_bridge::CvImagePtr cv_ptr;
 		Mat frame;
 		vector<Vec4i> lines;
+
 		try
 		{
-		cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+			cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
 		}
-		catch (cv_bridge::Exception& e)
+			catch (cv_bridge::Exception& e)
 		{
-		ROS_ERROR("cv_bridge exception: %s", e.what());
-		return;
+			ROS_ERROR("cv_bridge exception: %s", e.what());
+			return;
 		}
 
 		frame = blur(cv_ptr);
-        Mat frame_converted;
-
-    	cvtColor(frame, frame_converted, COLOR_BGR2HSV);
-	    inRange(frame_converted, Scalar(0,0,0), Scalar(72,255,255), frame_converted);
-
-        frame = detect_edges(frame_converted);
+		frame = convert_color(frame, 0, 72);
+        frame = detect_edges(frame, 9);
 		frame = dilate_erode(frame);
 
 		lines = find_lines(frame);
-		//lines = cam_object.remove_border_lines(lines, cap);
-		//lines = cam_object.sort_lines(lines);
-
+		lines = filter_lines(lines);
 		frame = drawLines(frame, lines);
-		frame = drawOneLine(frame, lines);
+
+		if (lines.size() > 0)
+		{
+			frame = get_direction(frame, lines);
+		}
 
 		// Update GUI Window
-		//cv::imshow(OPENCV_WINDOW, frame);
-		//
-
 		cv::waitKey(3);
 		cv::imshow(OPENCV_WINDOW, frame);
-		// Output modified video stream
-		//image_pub_.publish(cv_ptr->toImageMsg());
+		
   	}
 
 	Mat read(VideoCapture cap, Mat frame){
@@ -116,10 +123,6 @@ public:
 			cout << "Cannot read a frame from video stream" << endl;
 		}
 		return frame;
-	}
-
-	void showFrame(Mat frame){
-		imshow("frame", frame);
 	}
 
 	string get_string(int i){
@@ -148,15 +151,28 @@ public:
 				+".jpg",original);
 	}
 
-	Mat blur(cv_bridge::CvImagePtr frame){
+	Mat blur(cv_bridge::CvImagePtr frame, int blur_size = 3){
 		Mat frame_mat;
-		GaussianBlur(frame->image, frame_mat, Size(3,3),0,0);
+		GaussianBlur(frame->image, frame_mat, Size(blur_size, blur_size),0,0);
+		
 		return frame_mat;
 	}
 
-	Mat detect_edges(Mat frame){
+	Mat convert_color(Mat frame, int sat_low = 0, int sat_high = 72)
+	{
+		Mat frame_converted;
+
+    	cvtColor(frame, frame_converted, COLOR_BGR2HSV);
+	    inRange(frame_converted, Scalar(sat_low,0,0), Scalar(sat_high,255,255), frame_converted);
+		
+		return frame_converted;
+	}
+
+
+	Mat detect_edges(Mat frame, int kernel_size = 3){
 		Mat edgy;
 		Canny(frame,edgy,canny_low,canny_high,3);
+		
 		return edgy;
 	}
 
@@ -166,6 +182,7 @@ public:
 		Mat element = getStructuringElement(element_shape, Size(an*2+1, an*2+1), Point(an, an) );
 		dilate(frame, frame, element );
 		//erode(frame, frame, element );
+		
 		return frame;
 	}
 
@@ -173,44 +190,6 @@ public:
 		vector<Vec4i> lines;
 		HoughLinesP(frame, lines, 1, CV_PI/180, threshold_value, min_line_length, max_line_gap );
 		return lines;
-	}
-
-	vector<Vec4i> remove_border_lines(vector<Vec4i>& lines, VideoCapture cap){
-		vector<Vec4i> lines_passed;
-		double width = cap.get(CV_CAP_PROP_FRAME_WIDTH);
-		double height = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
-		for( size_t i = 0; i < lines.size(); i++ )
-		{
-			Vec4i l = lines[i];
-			if(l[0] < width - 120 && l[0] > 120){
-				if(l[1] < height - 120 && l[1] > 120){
-					lines_passed.push_back(l);
-				}
-			}
-
-		}
-		return lines_passed;
-	}
-
-	vector<Vec4i> sort_lines(vector<Vec4i>& lines){
-		vector<Vec4i> lines_passed;
-		double avg_angle = 0;
-
-		for( size_t i = 0; i < lines.size(); i++ )
-		{
-			Vec4i l = lines[i];
-			double delta_u = l[2]-l[0];
-			double delta_v = l[3]-l[1];
-
-			avg_angle += atan2(delta_v, delta_u)*180/3.14159265;
-
-			lines_passed.push_back(l);
-		}
-		if(lines.size() > 0){
-			avg_angle = avg_angle / lines.size();
-
-		}
-		return lines_passed;
 	}
 
 
@@ -224,158 +203,84 @@ public:
 		return frame;
 	}
 
-	Mat drawOneLine(Mat frame, vector<Vec4i>& lines){
-		double avg_angle = 0;
 
+	vector<Vec4i> filter_lines(vector<Vec4i> lines)
+	{
+		std::sort(lines.begin(), lines.end(), compareByLength);
+		int endOf = min(static_cast<int>(lines.size()), 4);
+		vector<Vec4i>::const_iterator first = lines.begin();
+		vector<Vec4i>::const_iterator last = lines.begin() + endOf;
+		vector<Vec4i> lines_filtered(first, last);
+		
+		return lines_filtered;
+	}
+
+
+	Vec4i get_line(vector<Vec4i> lines)
+	{
+		int i_min = 0;
+		int y_pos = 0;
+		int y_min = -1;
+
+		// Find position of element with highest position of y coordinate
+		for (int i = 0; i < lines.size(); i++) 
+		{
+			y_pos = min(lines[i][3], lines[i][1]);
+			if (y_pos < y_min)
+			{
+				y_min = y_pos;
+				i_min = i;
+			}
+		}
+
+		return lines[i_min];
+	}
+
+
+	Mat get_direction(Mat frame, vector<Vec4i> lines)
+	{
 		int height = frame.rows;
 		int width = frame.cols;
-
-		vector<double> lines_histogram;
-		vector< vector<double> > lines_location_histogram;
-
-		vector<double> location_info_template;
-		location_info_template.push_back(0.0);
-		location_info_template.push_back(0.0);
-		location_info_template.push_back(0.0);
-
-		int circle_sections = 180/1;
-
-		for( int i = 0; i < circle_sections; i ++){
-			lines_histogram.push_back(0);
-			lines_location_histogram.push_back(location_info_template);
-		}
-
-
-
-		for( size_t i = 0; i < lines.size(); i++ ){
-			Vec4i l = lines[i];
-			double delta_u = l[2]-l[0];
-			double delta_v = l[3]-l[1];
-			double l_length = sqrt(delta_u*delta_u+delta_v*delta_v);
-			double angle;
-			int angle_int;
-
-			if(atan2(delta_v, delta_u) < 0){
-				angle = atan2(delta_v, delta_u)+3.14159265;
-			} else {
-				angle = atan2(delta_v, delta_u);
-			}
-			angle_int = (angle*circle_sections/3.14159265);
-			lines_histogram[angle_int]+=l_length;
-
-			vector<double> location_info_prev = lines_location_histogram.at(angle_int);
-			double length_prev = location_info_prev[2];
-			double length_total = length_prev+l_length;
-			double length_weighting = length_prev/length_total;
-
-			double avg_u_prev = location_info_prev[0];
-			double avg_u_new = delta_u/2 + l[0];
-			double avg_u = length_weighting*avg_u_prev + (1-length_weighting)*avg_u_new;
-
-			double avg_v_prev = location_info_prev[1];
-			double avg_v_new = delta_v/2 + l[1];
-			double avg_v = length_weighting*avg_v_prev + (1-length_weighting)*avg_v_new;
-
-			vector<double> location_info;
-			location_info.push_back(avg_u);
-			location_info.push_back(avg_v);
-			location_info.push_back(length_total);
-
-			lines_location_histogram.at(angle_int) = location_info;
-		}
-
-		double max_value = 0;
-		double max_int = 0;
-		double second_highest_int = 0;
-		double second_highest_value = 0;
-		double u_temp;
-		double v_temp;
-		double u_prime = 0;
-		double u_secondary = 0;
-		double v_prime = 0;
-		double v_secondary = 0;
-
-		for( unsigned int i = 0; i < lines_histogram.size(); i ++){
-			if(lines_histogram[i]>max_value && abs(max_int-i)>2){
-				second_highest_int = max_int;
-				second_highest_value = max_value;
-				max_value = lines_histogram[i];
-				max_int = i;
-
-				u_secondary = u_prime;
-				v_secondary = v_prime;
-				if(i>0 && i<180){
-					double weight_previous = lines_location_histogram.at(i-1).at(2);
-					double weight_current = lines_location_histogram.at(i).at(2);
-					double weight_next = lines_location_histogram.at(i+1).at(2);
-					double weight_sum = weight_previous + weight_current + weight_next;
-
-					double u_previous = lines_location_histogram.at(i-1).at(0);
-					double u_current = lines_location_histogram.at(i).at(0);
-					double u_next = lines_location_histogram.at(i+1).at(0);
-
-					double average_u = u_previous*(weight_previous)/weight_sum+u_current*(weight_current)/weight_sum+u_next*(weight_next)/weight_sum;
-
-
-					double v_previous = lines_location_histogram.at(i-1).at(1);
-					double v_current = lines_location_histogram.at(i).at(1);
-					double v_next = lines_location_histogram.at(i+1).at(1);
-
-					double average_v = v_previous*(weight_previous)/weight_sum+v_current*(weight_current)/weight_sum+v_next*(weight_next)/weight_sum;
-
-					u_temp = 0.5+average_u;
-
-					v_temp = 0.5+average_v;
-				} else {
-					u_temp = 0.5+lines_location_histogram.at(i).at(0);
-					v_temp = 0.5+lines_location_histogram.at(i).at(1);
-				}
-
-				u_prime = u_temp;
-				v_prime = v_temp;
-			}
-		}
-
-
-		if(!(u_secondary==0)){
-			u_secondary = u_secondary_memory.sliding_window(u_secondary);
-			v_secondary = v_secondary_memory.sliding_window(v_secondary);
-		}
-
-		u_prime = u_prime_memory.sliding_window(u_prime);
-		v_prime = v_prime_memory.sliding_window(v_prime);
-
-
-		int u_prime_int = (int)u_prime;
-		int v_prime_int = (int)v_prime;
-		int u_secondary_int = (int)u_secondary;
-		int v_secondary_int = (int)v_secondary;
-
-
-		double max_angle = (max_int / circle_sections) * 3.14159265;
-		double second_angle = (second_highest_int / circle_sections) * 3.14159265;
 		double length = 200;
-		/*line( frame,
-				Point(width/2-length*cos(max_angle), height/2-length*sin(max_angle)),
-				Point(width/2+length*cos(max_angle), height/2+length*sin(max_angle)),
-				Scalar(0,255,0), 3, CV_AA);*/
-		double weighting_factor = max_value/(max_value+second_highest_value);
-		avg_angle = max_angle;
+		double angle;
 
-		avg_angle = angle_memory.sliding_window( avg_angle );
+		Vec4i l = get_line(lines);
+
+		double dx = l[2]-l[0];
+		double dy = l[3]-l[1];
+
+		if(atan2(dy, dx) < 0)
+		{
+			angle = atan2(dy, dx)+3.14159265;
+		} else 
+		{
+			angle = atan2(dy, dx);
+		}
+
+		angle = angle_memory.sliding_window(angle);
 		line( frame,
-					Point(width/2-length*cos(avg_angle), height/2-length*sin(avg_angle)),
-					Point(width/2+length*cos(avg_angle), height/2+length*sin(avg_angle)),
+					Point(width/2-length*cos(angle), height/2-length*sin(angle)),
+					Point(width/2+length*cos(angle), height/2+length*sin(angle)),
 					Scalar(255,255,0), 3, CV_AA);
 
-		/*
-        circle( frame, Point(u_prime_int,v_prime_int),50, Scalar(255,0,0),CV_FILLED, 8,0);
-		if(u_secondary != 0){
-			circle( frame, Point(u_secondary_int,v_secondary_int),50, Scalar(0,255,0),CV_FILLED, 8,0);
-		}*/
 		return frame;
-	}
+	}	
+
 };
+
+
+bool compareByLength(Vec4i &a, Vec4i &b)
+{
+	return distance_between_two_points(a) > distance_between_two_points(b);
+}
+
+double distance_between_two_points(Vec4i& line)
+{
+	double dx = line[2] - line[0];
+	double dy = line[3] - line[1];
+
+	return hypot(dy, dx);
+}
 
 int main(int argc, char **argv)
 {

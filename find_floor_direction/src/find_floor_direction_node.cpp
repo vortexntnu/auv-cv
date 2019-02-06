@@ -35,8 +35,8 @@ vector<Vec4i> filter_lines(vector<Vec4i> lines);
 Vec4i get_direction(vector<Vec4i> lines);
 double distance_between_two_points(int x1, int x2, int y1, int y2);
 double distance_between_two_points(Vec4i& line);
-double pythagoras(int height, int width);
 int line_to_deg(Vec4i& line);
+bool compareByLength(Vec4i &a, Vec4i &b);
 
 
 
@@ -97,22 +97,40 @@ public:
 	  HoughLinesP(frame_converted, lines, 1, CV_PI/180, 50, 50, 10 ); // runs the actual detection
 		
 		//Filter out lines that doesn't mach desired output
-		
 		lines_filtered = filter_lines(lines);
+		/*
+		std::sort(lines.begin(), lines.end(), compareByLength);
+		int endOf = min(static_cast<int>(lines.size()), 4);
+		vector<Vec4i>::const_iterator first = lines.begin();
+		vector<Vec4i>::const_iterator last = lines.begin() + endOf;
+		vector<Vec4i> lines_filtered(first, last);
+		*/
 
-
-		//check if empty
+		// Check if empty
 		if (lines_filtered.size() > 0)
 		{
 			line_dir = get_direction(lines_filtered);
 		}
+
+		cout << "######## New comparison #########" << endl;
+		vector<Vec4i>::iterator it = lines_filtered.begin();
+		for (it; it != lines_filtered.end(); ++it ) 
+		{
+			cout << *it << endl;
+			cout << distance_between_two_points(*it) << endl; 
+		} 
+		cout << endl;
+
+
 	    // Draw the lines
 	  for( size_t i = 0; i < lines_filtered.size(); i++ )
 	  {	
 			//cout << lines_filtered[i] << endl;
+
 			Vec4i l = lines_filtered[i];
 			line( frame_converted, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0,0,255), 2, LINE_AA);
 	  }
+		cout << endl;
 
 		///////////////////////// END CV ////////////////////////////
 
@@ -131,7 +149,7 @@ public:
 			direction.data = line_to_deg(line_dir);
 
 
-		ROS_INFO("%d", direction.data);
+		//ROS_INFO("%d", direction.data);
     detect_pub_.publish(direction);
 
 		///////////////////////// END PUBLISH ////////////////////////////
@@ -142,34 +160,30 @@ public:
 
 double distance_between_two_points(int x1, int x2, int y1, int y2)
 {
-	int distancex = abs(x2 - x1)^2;
-  int distancey = abs(y2 - y1)^2;
+	int dx = x2 - x1;
+  int dy = y2 - y1;
 
-	return sqrt(distancex - distancey);
+	return hypot(dy, dx);
 }
 
 
 double distance_between_two_points(Vec4i& line)
 {
-	int distancex = abs(line[2] - line[0]);
-  int distancey = abs(line[3] - line[1]);
+	double dx = line[2] - line[0];
+  double dy = line[3] - line[1];
 
-  return pythagoras(distancey, distancex);
-}
-
-
-double pythagoras(int height, int width)
-{
-  return sqrt((height^2) + (width^2));
+  return hypot(dy, dx);
 }
 
 
 Mat convert_frame(cv_bridge::CvImagePtr frame) 
 {
+	int sat_low = 0;
+	int sat_high = 72;
 	Mat canny_output, kernel, frame_converted;
 
 	cvtColor(frame->image, frame_converted, COLOR_BGR2HSV);
-	inRange(frame_converted, Scalar(0,0,0), Scalar(72,255,255), frame_converted);
+	inRange(frame_converted, Scalar(sat_low,0,0), Scalar(sat_high,255,255), frame_converted);
   GaussianBlur( frame_converted, frame_converted, Size(9,9), 0, 0);
 	Canny( frame_converted, canny_output, 10, 50, 3 );
 	kernel = Mat::ones(3, 3, CV_32F); //evt CV_8UC3
@@ -178,7 +192,12 @@ Mat convert_frame(cv_bridge::CvImagePtr frame)
 	return frame_converted;
 }
 
+bool compareByLength(Vec4i &a, Vec4i &b)
+{
+    return distance_between_two_points(a) > distance_between_two_points(b);
+}
 
+/*
 vector<Vec4i> filter_lines(vector<Vec4i> lines)
 {
 	vector<Vec4i> lines_filtered;
@@ -207,7 +226,7 @@ vector<Vec4i> filter_lines(vector<Vec4i> lines)
 			length_smallest = length;
 			length = distance_between_two_points(*it); 
 		} 
-		/*
+		
 		vector<Vec4i>::iterator it = lines_filtered.end();
 		while (it != lines_filtered.begin() || length > length_smallest)
 		{
@@ -216,15 +235,42 @@ vector<Vec4i> filter_lines(vector<Vec4i> lines)
 			length_smallest = length;
 			length = distance_between_two_points(*it);
 		}
-		*/
+
+		cout << "########## Before add ##########" << endl;
+		for( size_t i = 0; i < lines_filtered.size(); i++ )
+		{	
+			cout << lines_filtered[i] << endl;
+		}
+		cout << endl;
+
+		cout << "########## Adding ##########" << endl;
+		cout << *it << endl;
+		cout << endl;
+
 		if (length > length_smallest)
 			it_max = lines_filtered.insert(it.base(), *it);
+
+		cout << endl;
+		cout << "########## After add ##########" << endl;
+
 
 		if (lines_filtered.size() > 4)
 			lines_filtered.pop_back();	
 		
 	}
 
+	return lines_filtered;
+}
+*/
+
+vector<Vec4i> filter_lines(vector<Vec4i> lines)
+{
+	std::sort(lines.begin(), lines.end(), compareByLength);
+	int endOf = min(static_cast<int>(lines.size()), 4);
+	vector<Vec4i>::const_iterator first = lines.begin();
+	vector<Vec4i>::const_iterator last = lines.begin() + endOf;
+	vector<Vec4i> lines_filtered(first, last);
+	
 	return lines_filtered;
 }
 
