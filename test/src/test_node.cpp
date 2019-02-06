@@ -1,85 +1,207 @@
-#include "ros/ros.h"
-#include "std_msgs/String.h"
+//
+//  main.cpp
+//  CV
+//
+//  Created by Thomas Hellum on 22/10/2018.
+//  Copyright © 2018 Thomas Hellum. All rights reserved.
+//
 
+#include <ros/ros.h>
+#include <image_transport/image_transport.h>
+#include <cv_bridge/cv_bridge.h>
+#include <sensor_msgs/image_encodings.h>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+
+#include <opencv2/opencv.hpp>
+#include <opencv2/tracking.hpp>
+#include <opencv2/core/ocl.hpp>
+
+#include <iostream>
+#include <stdio.h>
+#include <stdlib.h>
+#include <vector>
+#include <algorithm> 
+#include "std_msgs/Bool.h"
+//#include "std_msgs/String.h"
 #include <sstream>
 
-/**
- * This tutorial demonstrates simple sending of messages over the ROS system.
- */
-int main(int argc, char **argv)
+using namespace cv;
+using namespace std;
+
+
+Mat convert_frame(cv_bridge::CvImagePtr frame);
+
+
+//Video
+Mat frame; 
+Mat frame_converted;
+
+static const std::string OPENCV_WINDOW = "Image window";
+/*
+class ImageConverter
 {
-  /**
-   * The ros::init() function needs to see argc and argv so that it can perform
-   * any ROS arguments and name remapping that were provided at the command line.
-   * For programmatic remappings you can use a different version of init() which takes
-   * remappings directly, but for most command-line programs, passing argc and argv is
-   * the easiest way to do it.  The third argument to init() is the name of the node.
-   *
-   * You must call one of the versions of ros::init() before using any other
-   * part of the ROS system.
-   */
-  ros::init(argc, argv, "talker");
+  ros::NodeHandle nh_;
+  image_transport::ImageTransport it_;
+  image_transport::Subscriber image_sub_;
+  ros::Publisher detect_pub_;
 
-  /**
-   * NodeHandle is the main access point to communications with the ROS system.
-   * The first NodeHandle constructed will fully initialize this node, and the last
-   * NodeHandle destructed will close down the node.
-   */
-  ros::NodeHandle n;
-
-  /**
-   * The advertise() function is how you tell ROS that you want to
-   * publish on a given topic name. This invokes a call to the ROS
-   * master node, which keeps a registry of who is publishing and who
-   * is subscribing. After this advertise() call is made, the master
-   * node will notify anyone who is trying to subscribe to this topic name,
-   * and they will in turn negotiate a peer-to-peer connection with this
-   * node.  advertise() returns a Publisher object which allows you to
-   * publish messages on that topic through a call to publish().  Once
-   * all copies of the returned Publisher object are destroyed, the topic
-   * will be automatically unadvertised.
-   *
-   * The second parameter to advertise() is the size of the message queue
-   * used for publishing messages.  If messages are published more quickly
-   * than we can send them, the number here specifies how many messages to
-   * buffer up before throwing some away.
-   */
-  ros::Publisher chatter_pub = n.advertise<std_msgs::String>("chatter", 1000);
-
-  ros::Rate loop_rate(10);
-
-  /**
-   * A count of how many messages we have sent. This is used to create
-   * a unique string for each message.
-   */
-  int count = 0;
-  while (ros::ok())
+public:
+  ImageConverter()
+    : it_(nh_)
   {
-    /**
-     * This is a message object. You stuff it with data, and then publish it.
-     */
-    std_msgs::String msg;
+    // Subscrive to input video feed and publish output video feed
+    image_sub_ = it_.subscribe("/camera/image", 1,
+      &ImageConverter::imageCb, this);
+    detect_pub_ = nh_.advertise<std_msgs::Bool>("detected_line", 1000);
 
-    std::stringstream ss;
-    ss << "hello world " << count;
-    msg.data = ss.str();
-
-    ROS_INFO("%s", msg.data.c_str());
-
-    /**
-     * The publish() function is how you send messages. The parameter
-     * is the message object. The type of this object must agree with the type
-     * given as a template parameter to the advertise<>() call, as was done
-     * in the constructor above.
-     */
-    chatter_pub.publish(msg);
-
-    ros::spinOnce();
-
-    loop_rate.sleep();
-    ++count;
+    namedWindow(OPENCV_WINDOW);
   }
 
+  ~ImageConverter()
+  {
+    destroyWindow(OPENCV_WINDOW);
+  }
 
+  void imageCb(const sensor_msgs::ImageConstPtr& msg)
+  {
+    cv_bridge::CvImagePtr cv_ptr;
+    try
+    {
+      cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+    }
+    catch (cv_bridge::Exception& e)
+    {
+      ROS_ERROR("cv_bridge exception: %s", e.what());
+      return;
+    }
+		
+		///////////////////////// CV ////////////////////////////
+
+		/// Convert color of image
+		frame_converted = convert_frame(cv_ptr);			
+
+		///////////////////////// END CV ////////////////////////////
+
+		
+    // Update GUI Window
+		imshow(OPENCV_WINDOW, frame_converted);
+    waitKey(3);
+
+  }
+};
+*/
+
+class ImageConverter
+{
+  ros::NodeHandle nh_;
+  image_transport::ImageTransport it_;
+  image_transport::Subscriber image_sub_;
+  ros::Publisher detect_pub_;
+
+public:
+  ImageConverter()
+    : it_(nh_)
+  {
+    // Subscrive to input video feed and publish output video feed
+    image_sub_ = it_.subscribe("/camera/image", 1,
+      &ImageConverter::imageCb, this);
+    detect_pub_ = nh_.advertise<std_msgs::Bool>("detected_line", 1000);
+
+    namedWindow(OPENCV_WINDOW);
+  }
+
+  ~ImageConverter()
+  {
+    destroyWindow(OPENCV_WINDOW);
+  }
+
+  void imageCb(const sensor_msgs::ImageConstPtr& msg)
+  {
+    cv_bridge::CvImagePtr cv_ptr;
+    try
+    {
+      cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+    }
+    catch (cv_bridge::Exception& e)
+    {
+      ROS_ERROR("cv_bridge exception: %s", e.what());
+      return;
+    }
+		
+		///////////////////////// CV ////////////////////////////
+
+    int iLowH = 0;
+    int iHighH = 179;
+
+    int iLowS = 0; 
+    int iHighS = 255;
+
+    int iLowV = 0;
+    int iHighV = 255;
+
+		/// Convert color of image
+		//frame_converted = convert_frame(cv_ptr);
+    
+    Mat imgOriginal;
+    Mat imgHSV;
+
+    //cvtColor(imgOriginal, imgHSV, COLOR_BGR2HSV); //Convert the captured frame from BGR to HSV
+    imgHSV = convert_frame(cv_ptr);
+
+    Mat imgThresholded;
+
+    inRange(imgHSV, Scalar(iLowH, iLowS, iLowV), Scalar(iHighH, iHighS, iHighV), imgThresholded); //Threshold the image
+
+    //morphological opening (remove small objects from the foreground)
+    erode(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)) );
+    dilate( imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)) ); 
+
+    //morphological closing (fill small holes in the foreground)
+    dilate( imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)) ); 
+    erode(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)) );
+
+    namedWindow( "Thresholded Image", CV_WINDOW_AUTOSIZE);
+    namedWindow( "Original", CV_WINDOW_AUTOSIZE);
+    resizeWindow("Original", 800, 600);
+    resizeWindow("Threshold Image", 800, 600);
+
+    imshow("Thresholded Image", imgThresholded); //show the thresholded image
+    imshow("Original", imgOriginal); //show the original image
+  	
+
+		///////////////////////// END CV ////////////////////////////
+
+		
+    // Update GUI Window
+		//imshow(OPENCV_WINDOW, frame_converted);
+    waitKey(3);
+
+  }
+};
+
+
+
+Mat convert_frame(cv_bridge::CvImagePtr frame) 
+{
+	Mat canny_output, kernel, frame_converted;
+
+	cvtColor(frame->image, frame_converted, COLOR_BGR2HSV);
+	//inRange(frame_converted, Scalar(0,0,50), Scalar(20,255,255), frame_converted);
+  //inRange(frame_converted, Scalar(160,0,60), Scalar(180,255,255), red2);
+  //GaussianBlur( frame_converted, frame_converted, Size(9,9), 0, 0);
+	//Canny( frame_converted, canny_output, 10, 50, 3 );
+	//kernel = Mat::ones(3, 3, CV_32F); //evt CV_8UC3
+	//dilate(canny_output, frame_converted, kernel);
+
+	return frame_converted;
+}
+
+
+int main(int argc, char** argv)
+{
+  ros::init(argc, argv, "image_converter");
+  ImageConverter ic;
+  ros::spin();
   return 0;
 }
