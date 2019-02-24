@@ -2,5 +2,5 @@
 
 ## Installing dependencies
 ```sh
-sudo apt install ros-kinetic-camera-camera-info-manager
+sudo apt install ros-kinetic-camera-info-manager
 ```
