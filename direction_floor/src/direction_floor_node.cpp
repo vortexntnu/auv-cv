@@ -17,8 +17,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <algorithm> 
-#include "std_msgs/Int8.h"
-
+//#include "std_msgs/Int8.h"
+#include "std_msgs/Float32.h"
 
 
 using namespace std;
@@ -37,7 +37,9 @@ private:
   	ros::NodeHandle nh_;
   	image_transport::ImageTransport it_;
   	image_transport::Subscriber image_sub_;
-  	image_transport::Publisher image_pub_;
+  	//image_transport::Publisher image_pub_;
+	ros::Publisher detect_pub_;
+
 
 	SlidingWindowMemory angle_memory;
 	SlidingWindowMemory u_prime_memory;
@@ -60,6 +62,7 @@ public:
 		image_sub_ = it_.subscribe("/camera/image", 1,
 		&ImageConverter::imageCb, this);
 		//image_pub_ = it_.advertise("/image_converter/output_video", 1);
+		detect_pub_ = nh_.advertise<std_msgs::Float32>("floor_direction", 1000);
 
 		cv::namedWindow(OPENCV_WINDOW, WINDOW_NORMAL);
 
@@ -84,6 +87,10 @@ public:
 		Mat frame;
 		vector<Vec4i> lines;
 
+		/***************
+			   SRC
+		****************/
+
 		try
 		{
 			cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
@@ -93,6 +100,10 @@ public:
 			ROS_ERROR("cv_bridge exception: %s", e.what());
 			return;
 		}
+
+		/***************
+			   CV
+		****************/
 
 		frame = blur(cv_ptr);
 		frame = convert_color(frame, 0, 72);
@@ -105,12 +116,25 @@ public:
 
 		if (lines.size() > 0)
 		{
-			frame = get_direction(frame, lines);
+			frame = plot_direction(frame, lines);
 		}
 
 		// Update GUI Window
 		cv::waitKey(3);
 		cv::imshow(OPENCV_WINDOW, frame);
+
+		/***************
+			Publish
+		****************/
+
+		// Output modified video stream
+		std_msgs::Float32 direction;
+
+		if (lines.size() != 0)
+			direction.data = get_direction();
+
+		ROS_INFO("%f", direction.data);
+    	detect_pub_.publish(direction);
 		
   	}
 
@@ -236,8 +260,8 @@ public:
 		return lines[i_min];
 	}
 
-
-	Mat get_direction(Mat frame, vector<Vec4i> lines)
+	
+	Mat plot_direction(Mat frame, vector<Vec4i> lines)
 	{
 		int height = frame.rows;
 		int width = frame.cols;
@@ -251,7 +275,7 @@ public:
 
 		if(atan2(dy, dx) < 0)
 		{
-			angle = atan2(dy, dx)+3.14159265;
+			angle = atan2(dy, dx) + 3.14159265;
 		} else 
 		{
 			angle = atan2(dy, dx);
@@ -265,6 +289,13 @@ public:
 
 		return frame;
 	}	
+
+
+	float get_direction()
+	{
+		float angle = angle_memory.sliding_window(angle);
+		return angle; //- (3.14159265/4);
+	}
 
 };
 
