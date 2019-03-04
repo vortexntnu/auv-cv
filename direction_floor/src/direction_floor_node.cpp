@@ -59,7 +59,7 @@ public:
 		: it_(nh_)
 	{
 		// Subscrive to input video feed and publish output video feed
-		image_sub_ = it_.subscribe("/camera/image", 1,
+		image_sub_ = it_.subscribe("/manta/manta/cameraunder/camera_image", 1,
 		&ImageConverter::imageCb, this);
 		//image_pub_ = it_.advertise("/image_converter/output_video", 1);
 		detect_pub_ = nh_.advertise<std_msgs::Float32>("floor_direction", 1000);
@@ -106,7 +106,13 @@ public:
 		****************/
 
 		frame = blur(cv_ptr);
-		frame = convert_color(frame, 0, 72);
+
+		// Convert for reality
+		//frame = convert_color(frame, 0, 72);
+
+		// Convert for simulator
+		frame = convert_color(frame, 10, 30, 20, 80, 20, 80);
+
         frame = detect_edges(frame, 9);
 		frame = dilate_erode(frame);
 
@@ -130,7 +136,7 @@ public:
 		// Output modified video stream
 		std_msgs::Float32 direction;
 
-		if (lines.size() != 0)
+		if (lines.size() > 0)
 			direction.data = get_direction();
 
 		ROS_INFO("%f", direction.data);
@@ -182,12 +188,12 @@ public:
 		return frame_mat;
 	}
 
-	Mat convert_color(Mat frame, int sat_low = 0, int sat_high = 72)
+	Mat convert_color(Mat frame, int H_lb = 0, int H_ub = 179, int S_lb = 0, int S_ub = 255, int V_lb = 0, int V_ub = 255)
 	{
 		Mat frame_converted;
 
     	cvtColor(frame, frame_converted, COLOR_BGR2HSV);
-	    inRange(frame_converted, Scalar(sat_low,0,0), Scalar(sat_high,255,255), frame_converted);
+	    inRange(frame_converted, Scalar(H_lb,S_lb,V_lb), Scalar(H_ub,S_ub,V_ub), frame_converted);
 		
 		return frame_converted;
 	}
@@ -240,7 +246,7 @@ public:
 	}
 
 
-	Vec4i get_line(vector<Vec4i> lines)
+	Vec4i get_minLine(vector<Vec4i> lines)
 	{
 		int i_min = 0;
 		int y_pos = 0;
@@ -268,7 +274,7 @@ public:
 		double length = 200;
 		double angle;
 
-		Vec4i l = get_line(lines);
+		Vec4i l = get_minLine(lines);
 
 		double dx = l[2]-l[0];
 		double dy = l[3]-l[1];
@@ -293,8 +299,8 @@ public:
 
 	float get_direction()
 	{
-		float angle = angle_memory.sliding_window(angle);
-		return angle; //- (3.14159265/4);
+		float angle = angle_memory.get_value();
+		return angle - (3.14159265/2);
 	}
 
 };

@@ -36,6 +36,12 @@ int main(int argc, char** argv)
     // Check if video source has been passed as a parameter
     if(argv[1] == NULL){
         std::cout << "Please provide a video source" << std::endl;
+        std::cout << "0: video0" << std::endl;
+        std::cout << "1: video1" << std::endl;
+        std::cout << "2: GOPR5068.MP4" << std::endl;
+        std::cout << "3: real_pipe1.mp4" << std::endl;
+        std::cout << "4: guide_posts.mp4" << std::endl;
+
         return 1;
     }
 
@@ -55,10 +61,15 @@ int main(int argc, char** argv)
     }
 
 
-
     cv::VideoCapture cap(video_source);
     string name = std::getenv("USER");
     switch(video_source){
+        case 0:
+            cap.open(0);
+            break;
+        case 1:
+            cap.open(video_source);
+            break;
         case 2:
             cap.open("/home/"+name+"/Videos/pipe_dock/GOPR5068.MP4");
             break;
