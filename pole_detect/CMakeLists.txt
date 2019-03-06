@@ -13,7 +13,11 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs
   std_msgs
+<<<<<<< HEAD:pole_detect/CMakeLists.txt
   #vortex_msgs
+=======
+  vortex_msgs
+>>>>>>> 0812541b1ff4ae59ec24a9998857eb53a5f5a33a:stolpe/CMakeLists.txt
   message_generation
 )
 find_package(OpenCV REQUIRED)
