@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs
   std_msgs
+  vortex_msgs
   message_generation
 )
 find_package(OpenCV REQUIRED)
