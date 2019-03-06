@@ -20,6 +20,18 @@ using namespace cv_bridge;
 using namespace image_transport;
 static const std::string OPENCV_WINDOW = "Image window";
 static const std::string WINDOW2 = "Image window 2";
+
+
+enum
+{
+	CAMERA_FRONT = 0,
+	CAMERA_UNDER = 1,
+  SIMULATOR = 2
+};
+
+/***** INPUT SELECTOR *****/
+int src = CAMERA_FRONT;
+
 class ImageConverter
 {
   ros::NodeHandle nh_;
@@ -33,10 +45,19 @@ class ImageConverter
       : it_(nh_)
     {
       // Subscribe to input video feed and publish output video feed
-      image_sub_ = it_.subscribe("/manta/manta/camera/camera_image",1,&ImageConverter::imageCb, this);
-      detect_pub_ = n_.advertise<stolpe::CameraObjectInfo>("/camera_object_info",1000);
-      //detect_pub_ = nh_.advertise<std_msgs::Bool>("stolpe_detected",1000);
-      // Image for publishing
+      switch(src) {
+      case CAMERA_FRONT: // 0
+        image_sub_ = it_.subscribe("/camera/front", 1, &ImageConverter::imageCb, this);
+        break;
+      case CAMERA_UNDER: // 1
+        image_sub_ = it_.subscribe("/camera/under", 1, &ImageConverter::imageCb, this);
+        break;
+      case SIMULATOR: // 2
+        image_sub_ = it_.subscribe("/manta/manta/cameraunder/camera_image", 1, &ImageConverter::imageCb, this);
+        break;
+      }
+      detect_pub_ = n_.advertise<stolpe::CameraObjectInfo>("pole_midpint",1000);
+
       cv::namedWindow(OPENCV_WINDOW);
     }
     ~ImageConverter()

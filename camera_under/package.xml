@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>video_front</name>
+  <name> camera_under </name>
   <version>0.0.0</version>
-  <description>The video_front package</description>
+  <description>The camera_under package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->

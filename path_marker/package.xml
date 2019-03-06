@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>direction_floor</name>
+  <name> path_marker </name>
   <version>0.0.0</version>
-  <description>The direction_floor package</description>
+  <description>The path_marker package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->

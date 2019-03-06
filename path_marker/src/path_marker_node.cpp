@@ -1,4 +1,4 @@
-#include <direction_floor/SlidingWindowMemory.h>
+#include <path_marker/SlidingWindowMemory.h>
 #include <ros/ros.h>
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
@@ -29,6 +29,15 @@ static const std::string OPENCV_WINDOW = "Image window";
 bool compareByLength(Vec4i &a, Vec4i &b);
 double distance_between_two_points(Vec4i& line);
 
+enum
+{
+	CAMERA_FRONT = 0,
+	CAMERA_UNDER = 1,
+    SIMULATOR = 2
+};
+
+/***** INPUT SELECTOR *****/
+int src = CAMERA_FRONT;
 
 class ImageConverter
 {
@@ -37,7 +46,6 @@ private:
   	ros::NodeHandle nh_;
   	image_transport::ImageTransport it_;
   	image_transport::Subscriber image_sub_;
-  	//image_transport::Publisher image_pub_;
 	ros::Publisher detect_pub_;
 
 
@@ -58,11 +66,26 @@ public:
 	ImageConverter()
 		: it_(nh_)
 	{
+		// Subscribe to input video feed and publish output video feed
+		switch(src) {
+		case CAMERA_FRONT: // 0
+			image_sub_ = it_.subscribe("/camera/front", 1, &ImageConverter::imageCb, this);
+			break;
+		case CAMERA_UNDER: // 1
+			image_sub_ = it_.subscribe("/camera/under", 1, &ImageConverter::imageCb, this);
+			break;
+		case SIMULATOR: // 2
+			image_sub_ = it_.subscribe("/manta/manta/cameraunder/camera_image", 1, &ImageConverter::imageCb, this);
+			break;
+		}
+		detect_pub_ = nh_.advertise<std_msgs::Float32>("path_angle", 1000);
+
+
 		// Subscrive to input video feed and publish output video feed
-		image_sub_ = it_.subscribe("/manta/manta/cameraunder/camera_image", 1,
-		&ImageConverter::imageCb, this);
+		// image_sub_ = it_.subscribe("/manta/manta/cameraunder/camera_image", 1,
+		// &ImageConverter::imageCb, this);
 		//image_pub_ = it_.advertise("/image_converter/output_video", 1);
-		detect_pub_ = nh_.advertise<std_msgs::Float32>("floor_direction", 1000);
+		//detect_pub_ = nh_.advertise<std_msgs::Float32>("floor_direction", 1000);
 
 		cv::namedWindow(OPENCV_WINDOW, WINDOW_NORMAL);
 
@@ -87,10 +110,6 @@ public:
 		Mat frame;
 		vector<Vec4i> lines;
 
-		/***************
-			   SRC
-		****************/
-
 		try
 		{
 			cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
@@ -107,11 +126,15 @@ public:
 
 		frame = blur(cv_ptr);
 
-		// Convert for reality
-		//frame = convert_color(frame, 0, 72);
-
-		// Convert for simulator
-		frame = convert_color(frame, 10, 30, 20, 80, 20, 80);
+		switch(src) {
+		case CAMERA_FRONT: // 0
+		case CAMERA_UNDER: // 1
+			frame = convert_color(frame, 0, 72);
+			break;
+		case SIMULATOR: // 2
+			frame = convert_color(frame, 10, 30, 20, 80, 20, 80);
+			break;
+		}
 
         frame = detect_edges(frame, 9);
 		frame = dilate_erode(frame);
