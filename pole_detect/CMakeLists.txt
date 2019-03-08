@@ -123,7 +123,7 @@ CATKIN_DEPENDS message_runtime
 include_directories(
   ${OpenCV_INCLUDE_DIRS}
 
-# include
+  include
   ${catkin_INCLUDE_DIRS}
 )
 

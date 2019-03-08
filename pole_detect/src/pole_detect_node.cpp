@@ -10,7 +10,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include "std_msgs/Bool.h"
-#include "stolpe/CameraObjectInfo.h"
+#include "CameraObjectInfo.h"
 #include <sstream>
 
 // Quality of life
@@ -56,7 +56,7 @@ class ImageConverter
         image_sub_ = it_.subscribe("/manta/manta/cameraunder/camera_image", 1, &ImageConverter::imageCb, this);
         break;
       }
-      detect_pub_ = n_.advertise<stolpe::CameraObjectInfo>("pole_midpint",1000);
+      detect_pub_ = n_.advertise<pole_detect::CameraObjectInfo>("pole_midpint",1000);
 
       cv::namedWindow(OPENCV_WINDOW);
     }
@@ -85,7 +85,7 @@ class ImageConverter
     Rect2d bbox;
     Rect2d bbox_big;
     vector<Rect2d> act_bbox;
-    stolpe::CameraObjectInfo detected_2;
+    pole_detect::CameraObjectInfo detected_2;
     // Setting publishing variables to default values
     detected_2.frame_height = cv_ptr->image.rows;//bbox.height;
     detected_2.frame_width = cv_ptr->image.cols;//bbox.width;
