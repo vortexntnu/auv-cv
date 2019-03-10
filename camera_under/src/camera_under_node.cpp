@@ -67,8 +67,8 @@ int main(int argc, char** argv)
                 std::cout << "0: video0" << std::endl;
                 std::cout << "1: video1" << std::endl;
                 std::cout << "2: video2" << std::endl;
-                std::cout << "3: GOPR1142.mp4 @ ~/Videos" << std::endl;
-                std::cout << "4: guide_posts.mp4 @ ~/Videos" << std::endl;
+                std::cout << "3: ~/Videos/GOPR1142.mp4" << std::endl;
+                std::cout << "4: ~/Videos/guide_posts.mp4" << std::endl;
                 std::cout << "default: specify path to source \n" << std::endl;
 
                 std::cout << "Opening default camera at computer" << std::endl;

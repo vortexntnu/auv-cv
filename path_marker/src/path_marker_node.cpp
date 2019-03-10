@@ -162,7 +162,7 @@ public:
 		if (lines.size() > 0)
 			direction.data = get_direction();
 
-		ROS_INFO("%f", direction.data);
+		//ROS_INFO("%f", direction.data);
     	detect_pub_.publish(direction);
 		
   	}
@@ -241,7 +241,7 @@ public:
 
 	vector<Vec4i> find_lines(Mat frame){
 		vector<Vec4i> lines;
-		HoughLinesP(frame, lines, 1, CV_PI/180, threshold_value, min_line_length, max_line_gap );
+		HoughLinesP(frame, lines, 3, CV_PI/180, threshold_value, min_line_length, max_line_gap );
 		return lines;
 	}
 
@@ -278,6 +278,8 @@ public:
 		// Find position of element with highest position of y coordinate
 		for (int i = 0; i < lines.size(); i++) 
 		{
+			cout << lines[i] << endl;
+
 			y_pos = min(lines[i][3], lines[i][1]);
 			if (y_pos < y_min)
 			{
@@ -285,6 +287,8 @@ public:
 				i_min = i;
 			}
 		}
+		cout << endl;
+
 
 		return lines[i_min];
 	}
