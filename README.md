@@ -19,7 +19,8 @@ The taskes from 2018 can be found here: https://www.robonation.org/sites/default
 ## Content
 
 ### Camera_front
-Capture video from front camera using OpenCV and publish the video to the ROS topic '/camera/front'. 
+Capture video from front camera using OpenCV and publish the video to the ROS topic `/camera/front`. 
+
 Usage:
 ```sh
 rosrun video_front video_front [source]
@@ -34,7 +35,8 @@ Notice that there are multiple video sources (if no source is provided then the 
 
 ### Camera_under
 Will be added later.
-Capture video from front camera using OpenCV and publish the video to the ROS topic '/camera/under'. 
+Capture video from front camera using OpenCV and publish the video to the ROS topic `/camera/under`. 
+
 Usage:
 ```sh
 rosrun video_under video_under [source]
@@ -43,6 +45,7 @@ rosrun video_under video_under [source]
 ### Video_stream_opencv
 Package from ROS: http://wiki.ros.org/image_view.
 Installation: https://github.com/ros-perception/image_pipeline.
+
 Usage (for displaying video with image_view):
 ```sh
 rosrun image_view image_view image:=<image topic> [image transport type]
@@ -50,7 +53,8 @@ rosrun image_view image_view image:=<image topic> [image transport type]
 
 ### Pole_detect
 Task 1 of the competition. Uses color filtering together with contour detection by OpenCV to capture the pole(s) of the gate. 
-Publishes the midpoint of the detected pole(s) on the topic: 'pole_midpoint'.
+Publishes the midpoint of the detected pole(s) on the topic: `pole_midpoint`.
+
 Usage: 
 ```sh
 rosrun gate_detect gate_detect
@@ -58,8 +62,8 @@ rosrun gate_detect gate_detect
 
 ### Path_marker
 Follows task 1 in the competition. The guide post points out the direction of the next obstacle/task. Uses color filtering together with line detection by OpenCV to capture the direction intended by the guide post. The direction (compared to the heading of the AUV) is buffered using the "sliding window"-method.
-The direction is published on the topic: 'path_angle'.
+The direction is published on the topic: `path_angle`.
 Usage: 
 ```sh
-rosrun guide_post guide_post
+rosrun path_marker path_marker
 ```
