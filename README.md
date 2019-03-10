@@ -1,8 +1,9 @@
 # AUV-CV
-Download this repo as a subfolder to src in catkin workspace of ROS. 
+Download this repo to your src-folder in your catkin workspace.
 
 ## Installing dependencies
 OpenCV >= 3.4.0: https://github.com/opencv/opencv
+
 ROS - Kinetic Kame: http://wiki.ros.org/kinetic
 
 ```sh
@@ -27,8 +28,8 @@ Notice that there are multiple video sources (if no source is provided then the 
 - 0: video0
 - 1: video1
 - 2: video2
-- 3: GOPR1142.mp4 @ ~/Videos
-- 4: guide_posts.mp4 @ ~/Videos
+- 3: ~/Videos/GOPR1142.mp4
+- 4: ~/Videos/guide_posts.mp4
 - default: specify path to source
 
 ### Camera_under
