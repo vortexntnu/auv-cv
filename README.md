@@ -63,6 +63,7 @@ rosrun gate_detect gate_detect
 ### Path_marker
 Follows task 1 in the competition. The guide post points out the direction of the next obstacle/task. Uses color filtering together with line detection by OpenCV to capture the direction intended by the guide post. The direction (compared to the heading of the AUV) is buffered using the "sliding window"-method.
 The direction is published on the topic: `path_angle`.
+
 Usage: 
 ```sh
 rosrun path_marker path_marker
