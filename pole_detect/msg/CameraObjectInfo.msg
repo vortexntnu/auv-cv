@@ -10,3 +10,5 @@ int16 frame_height
 
 #range [0 , 1]
 float64 confidence
+
+

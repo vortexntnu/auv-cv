@@ -30,7 +30,7 @@ enum
 };
 
 /***** INPUT SELECTOR *****/
-int src = CAMERA_FRONT;
+int src = SIMULATOR;
 
 class ImageConverter
 {
@@ -53,7 +53,7 @@ class ImageConverter
         image_sub_ = it_.subscribe("/camera/under", 1, &ImageConverter::imageCb, this);
         break;
       case SIMULATOR: // 2
-        image_sub_ = it_.subscribe("/manta/manta/cameraunder/camera_image", 1, &ImageConverter::imageCb, this);
+        image_sub_ = it_.subscribe("/manta/manta/camerafront/camera_image", 1, &ImageConverter::imageCb, this);
         break;
       }
       detect_pub_ = n_.advertise<pole_detect::CameraObjectInfo>("pole_midpint",1000);
@@ -86,12 +86,16 @@ class ImageConverter
     Rect2d bbox_big;
     vector<Rect2d> act_bbox;
     pole_detect::CameraObjectInfo detected_2;
+    float distance_estimator = 10; // Height pixels of an object 1m from camera
+    float pole_width_1m = 15;
+    float distance;
     // Setting publishing variables to default values
     detected_2.frame_height = cv_ptr->image.rows;//bbox.height;
     detected_2.frame_width = cv_ptr->image.cols;//bbox.width;
     detected_2.confidence = 0;
     detected_2.pos_x = -1;
     detected_2.pos_y = -1;	
+    //detected_2.distance = -1;
 		
 
     // Reading video stream and putting on a red mask
@@ -162,6 +166,21 @@ class ImageConverter
     	detected_2.pos_y = ((y11+y22)/2 + (((y1+y2)/2 - (y11-y22)/2)/2))+50;	
 			detected_2.confidence = 1;
 		}
+
+    // Calculating and publishing distance to object if object is in center of camera
+    if (detected_2.pos_x > (detected_2.frame_width/2 - 200) && detected_2.pos_x < (detected_2.frame_width/2 + 200)) {
+      if  (detected_2.pos_y > (detected_2.frame_height/2 - 200) && detected_2.pos_y < (detected_2.frame_height/2 + 200)) {
+        bbox = heights.end()[-1];
+        distance = (pole_width_1m *  distance_estimator) / (float)bbox.height;
+        //detected_2.distance = distance;
+        std::cout << distance <<std::endl;
+      } 
+    }
+
+    
+
+
+
 
     // Displaying imshow for testing
 		cv::imshow(OPENCV_WINDOW, red3);
