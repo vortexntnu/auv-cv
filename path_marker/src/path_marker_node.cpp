@@ -29,6 +29,8 @@ static const std::string OPENCV_WINDOW = "Image window";
 bool compareByLength(Vec4i &a, Vec4i &b);
 double distance_between_two_points(Vec4i& line);
 
+#define PI 3.14159265
+
 enum
 {
 	CAMERA_FRONT = 0,
@@ -127,12 +129,14 @@ public:
 		frame = blur(cv_ptr);
 
 		switch(src) {
+		case SIMULATOR: // 2
+			frame = convert_color(frame, 10, 30, 20, 80, 20, 80); // HUE: low, high; SAT: low, high; Value: low, high
+			break;
 		case CAMERA_FRONT: // 0
 		case CAMERA_UNDER: // 1
-			frame = convert_color(frame, 0, 72);
-			break;
-		case SIMULATOR: // 2
-			frame = convert_color(frame, 10, 30, 20, 80, 20, 80);
+		default:
+			//frame = convert_color(frame, 0, 72);
+			frame = convert_color(frame, 0, 72, 0, 255, 0, 255); 
 			break;
 		}
 
@@ -278,7 +282,7 @@ public:
 		// Find position of element with highest position of y coordinate
 		for (int i = 0; i < lines.size(); i++) 
 		{
-			cout << lines[i] << endl;
+			//cout << lines[i] << endl;
 
 			y_pos = min(lines[i][3], lines[i][1]);
 			if (y_pos < y_min)
@@ -287,7 +291,7 @@ public:
 				i_min = i;
 			}
 		}
-		cout << endl;
+		//cout << endl;
 
 
 		return lines[i_min];
@@ -308,18 +312,21 @@ public:
 
 		if(atan2(dy, dx) < 0)
 		{
-			angle = atan2(dy, dx) + 3.14159265;
+			angle = atan2(dy, dx); // + PI;
+			//cout << "Angle: " << angle << endl;
+
 		} else 
 		{
 			angle = atan2(dy, dx);
 		}
-
+		cout << "Angle: " << angle << endl;
 		angle = angle_memory.sliding_window(angle);
+		cout << "Angle memory: " << angle << endl;
+		cout << endl;
 		line( frame,
 					Point(width/2-length*cos(angle), height/2-length*sin(angle)),
 					Point(width/2+length*cos(angle), height/2+length*sin(angle)),
 					Scalar(255,255,0), 3, CV_AA);
-
 		return frame;
 	}	
 
