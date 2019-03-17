@@ -31,16 +31,6 @@ double distance_between_two_points(Vec4i& line);
 
 #define PI 3.14159265
 
-enum
-{
-	CAMERA_FRONT = 0,
-	CAMERA_UNDER = 1,
-    SIMULATOR = 2
-};
-
-/***** INPUT SELECTOR *****/
-int src = CAMERA_FRONT;
-
 class ImageConverter
 {
 
@@ -57,6 +47,9 @@ private:
 	SlidingWindowMemory u_secondary_memory;
 
 	SlidingWindowMemory v_secondary_memory;
+	
+	char* src;
+
 	int canny_low;
 	int canny_high;
 	int kernel_value;
@@ -65,35 +58,33 @@ private:
 	int max_line_gap;
 
 public:
-	ImageConverter()
+	ImageConverter(int argc, char** argv)
 		: it_(nh_)
 	{
-		// Subscribe to input video feed and publish output video feed
-		switch(src) {
-		case CAMERA_FRONT: // 0
-			image_sub_ = it_.subscribe("/camera/front", 1, &ImageConverter::imageCb, this);
-			break;
-		case CAMERA_UNDER: // 1
-			image_sub_ = it_.subscribe("/camera/under", 1, &ImageConverter::imageCb, this);
-			break;
-		case SIMULATOR: // 2
-			image_sub_ = it_.subscribe("/manta/manta/cameraunder/camera_image", 1, &ImageConverter::imageCb, this);
-			break;
+		if((argv[1] == NULL))
+		{
+			std::cout << "Please provide a ROS topic to subscribe. The following are recomended:" << std::endl;
+			std::cout << "- /camera/front" << std::endl;
+			std::cout << "- /camera/under" << std::endl;
+			std::cout << "Subscribing to default topic of simulator: /manta/manta/cameraunder/camera_image" << std::endl;
+    	}
+		else
+		{
+			src = argv[1];
 		}
-		detect_pub_ = nh_.advertise<std_msgs::Float32>("path_angle", 1000);
 
 
 		// Subscrive to input video feed and publish output video feed
-		// image_sub_ = it_.subscribe("/manta/manta/cameraunder/camera_image", 1,
-		// &ImageConverter::imageCb, this);
-		//image_pub_ = it_.advertise("/image_converter/output_video", 1);
-		//detect_pub_ = nh_.advertise<std_msgs::Float32>("floor_direction", 1000);
+		image_sub_ = it_.subscribe("image", 1, &ImageConverter::imageCb, this);
+		detect_pub_ = nh_.advertise<std_msgs::Float32>("path_angle", 1000);
+
 
 		cv::namedWindow(OPENCV_WINDOW, WINDOW_NORMAL);
 
+
 		canny_low = 23;
 		canny_high = 55;
-		kernel_value = 1;
+		kernel_value = 3;
 		threshold_value = 120;
 		min_line_length = 10;
 		max_line_gap = 10;
@@ -128,16 +119,15 @@ public:
 
 		frame = blur(cv_ptr);
 
-		switch(src) {
-		case SIMULATOR: // 2
-			frame = convert_color(frame, 10, 30, 20, 80, 20, 80); // HUE: low, high; SAT: low, high; Value: low, high
-			break;
-		case CAMERA_FRONT: // 0
-		case CAMERA_UNDER: // 1
-		default:
-			//frame = convert_color(frame, 0, 72);
+		if (!strcmp(src, "/camera/front") || !strcmp(src, "/camera/under"))
+		{
+			// HUE: low, high; SAT: low, high; Value: low, high
 			frame = convert_color(frame, 0, 72, 0, 255, 0, 255); 
-			break;
+		}
+		else
+		{
+			// HUE: low, high; SAT: low, high; Value: low, high
+			frame = convert_color(frame, 10, 30, 20, 80, 20, 80); 
 		}
 
         frame = detect_edges(frame, 9);
@@ -238,7 +228,7 @@ public:
 		int element_shape = MORPH_RECT;
 		Mat element = getStructuringElement(element_shape, Size(an*2+1, an*2+1), Point(an, an) );
 		dilate(frame, frame, element );
-		//erode(frame, frame, element );
+		erode(frame, frame, element );
 		
 		return frame;
 	}
@@ -312,17 +302,15 @@ public:
 
 		if(atan2(dy, dx) < 0)
 		{
-			angle = atan2(dy, dx); // + PI;
-			//cout << "Angle: " << angle << endl;
-
+			angle = atan2(dy, dx) + PI;
 		} else 
 		{
 			angle = atan2(dy, dx);
 		}
-		cout << "Angle: " << angle << endl;
+		// cout << "Angle: " << angle << endl;
 		angle = angle_memory.sliding_window(angle);
-		cout << "Angle memory: " << angle << endl;
-		cout << endl;
+		// cout << "Angle memory: " << angle << endl;
+		// cout << endl;
 		line( frame,
 					Point(width/2-length*cos(angle), height/2-length*sin(angle)),
 					Point(width/2+length*cos(angle), height/2+length*sin(angle)),
@@ -353,10 +341,12 @@ double distance_between_two_points(Vec4i& line)
 	return hypot(dy, dx);
 }
 
+
+
 int main(int argc, char **argv)
 {
-	ros::init(argc, argv, "pipe_detection");
-	ImageConverter ic;
+	ros::init(argc, argv, "path_marker");
+	ImageConverter ic(argc, argv);
 	ros::spin();
 	return 0;
 }

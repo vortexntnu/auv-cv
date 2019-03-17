@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<launch>
+   <arg name="src"/>
+
+    <node 
+    name="camera_under"
+    pkg="camera"
+    type="camera_node"
+    args="$(arg src)"
+    output="screen">
+    
+    <remap from="camera" to="/camera/under"/>
+    </node>
+</launch>
