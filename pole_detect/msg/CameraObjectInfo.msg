@@ -11,4 +11,7 @@ int16 frame_height
 #range [0 , 1]
 float64 confidence
 
+#Distance
+float64 distance_to_pole 
+
 
