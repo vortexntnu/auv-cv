@@ -79,7 +79,7 @@ public:
 
 		canny_low = 23;
 		canny_high = 55;
-		kernel_value = 3;
+		kernel_value = 5;
 		threshold_value = 120;
 		min_line_length = 10;
 		max_line_gap = 10;
@@ -117,12 +117,12 @@ public:
 
 		if (!strcmp(src, "/camera/front") || !strcmp(src, "/camera/under")) // Regular camera
 		{
-			// HUE: low, high; SAT: low, high; Value: low, high
+			// HUE: low, high; SAT: low, high; VALUE: low, high
 			frame = convert_color(frame, 0, 72, 0, 255, 0, 255); 
 		}
 		else // Simulator
 		{
-			// HUE: low, high; SAT: low, high; Value: low, high
+			// HUE: low, high; SAT: low, high; VALUE: low, high
 			frame = convert_color(frame, 10, 30, 20, 80, 20, 80); 
 		}
 

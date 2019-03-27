@@ -66,11 +66,10 @@ void pop_front(std::vector<T>& vec)
 
 cv::Mat Canny_SlidingWindowMemory::sliding_window(cv::Mat frame){
 	canny_memory.push_back(frame);
-	if (canny_memory.size() > 3) {
+	if (canny_memory.size() > memory_size) {
 		pop_front(canny_memory);
 	}
 
-	cv::Mat canny_added;
 	canny_sum = frame + canny_memory[0] + canny_memory[1];
 
 	return canny_sum;
