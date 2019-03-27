@@ -1,4 +1,4 @@
-#include <direction_floor/SlidingWindowMemory.h>
+#include <path_marker/SlidingWindowMemory.h>
 #include <ros/ros.h>
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
@@ -29,6 +29,7 @@ static const std::string OPENCV_WINDOW = "Image window";
 bool compareByLength(Vec4i &a, Vec4i &b);
 double distance_between_two_points(Vec4i& line);
 
+#define PI 3.14159265
 
 class ImageConverter
 {
@@ -37,7 +38,6 @@ private:
   	ros::NodeHandle nh_;
   	image_transport::ImageTransport it_;
   	image_transport::Subscriber image_sub_;
-  	//image_transport::Publisher image_pub_;
 	ros::Publisher detect_pub_;
 
 
@@ -47,6 +47,9 @@ private:
 	SlidingWindowMemory u_secondary_memory;
 
 	SlidingWindowMemory v_secondary_memory;
+	
+	char* src;
+
 	int canny_low;
 	int canny_high;
 	int kernel_value;
@@ -55,20 +58,33 @@ private:
 	int max_line_gap;
 
 public:
-	ImageConverter()
+	ImageConverter(int argc, char** argv)
 		: it_(nh_)
 	{
+		if((argv[1] == NULL))
+		{
+			std::cout << "Please provide a ROS topic to subscribe. The following are recomended:" << std::endl;
+			std::cout << "- /camera/front" << std::endl;
+			std::cout << "- /camera/under" << std::endl;
+			std::cout << "Subscribing to default topic of simulator: /manta/manta/cameraunder/camera_image" << std::endl;
+    	}
+		else
+		{
+			src = argv[1];
+		}
+
+
 		// Subscrive to input video feed and publish output video feed
-		image_sub_ = it_.subscribe("/camera/image", 1,
-		&ImageConverter::imageCb, this);
-		//image_pub_ = it_.advertise("/image_converter/output_video", 1);
-		detect_pub_ = nh_.advertise<std_msgs::Float32>("floor_direction", 1000);
+		image_sub_ = it_.subscribe("image", 1, &ImageConverter::imageCb, this);
+		detect_pub_ = nh_.advertise<std_msgs::Float32>("path_angle", 1000);
+
 
 		cv::namedWindow(OPENCV_WINDOW, WINDOW_NORMAL);
 
+
 		canny_low = 23;
 		canny_high = 55;
-		kernel_value = 1;
+		kernel_value = 3;
 		threshold_value = 120;
 		min_line_length = 10;
 		max_line_gap = 10;
@@ -87,10 +103,6 @@ public:
 		Mat frame;
 		vector<Vec4i> lines;
 
-		/***************
-			   SRC
-		****************/
-
 		try
 		{
 			cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
@@ -106,7 +118,18 @@ public:
 		****************/
 
 		frame = blur(cv_ptr);
-		frame = convert_color(frame, 0, 72);
+
+		if (!strcmp(src, "/camera/front") || !strcmp(src, "/camera/under"))
+		{
+			// HUE: low, high; SAT: low, high; Value: low, high
+			frame = convert_color(frame, 0, 72, 0, 255, 0, 255); 
+		}
+		else
+		{
+			// HUE: low, high; SAT: low, high; Value: low, high
+			frame = convert_color(frame, 10, 30, 20, 80, 20, 80); 
+		}
+
         frame = detect_edges(frame, 9);
 		frame = dilate_erode(frame);
 
@@ -130,10 +153,10 @@ public:
 		// Output modified video stream
 		std_msgs::Float32 direction;
 
-		if (lines.size() != 0)
+		if (lines.size() > 0)
 			direction.data = get_direction();
 
-		ROS_INFO("%f", direction.data);
+		//ROS_INFO("%f", direction.data);
     	detect_pub_.publish(direction);
 		
   	}
@@ -182,12 +205,12 @@ public:
 		return frame_mat;
 	}
 
-	Mat convert_color(Mat frame, int sat_low = 0, int sat_high = 72)
+	Mat convert_color(Mat frame, int H_lb = 0, int H_ub = 179, int S_lb = 0, int S_ub = 255, int V_lb = 0, int V_ub = 255)
 	{
 		Mat frame_converted;
 
     	cvtColor(frame, frame_converted, COLOR_BGR2HSV);
-	    inRange(frame_converted, Scalar(sat_low,0,0), Scalar(sat_high,255,255), frame_converted);
+	    inRange(frame_converted, Scalar(H_lb,S_lb,V_lb), Scalar(H_ub,S_ub,V_ub), frame_converted);
 		
 		return frame_converted;
 	}
@@ -205,14 +228,14 @@ public:
 		int element_shape = MORPH_RECT;
 		Mat element = getStructuringElement(element_shape, Size(an*2+1, an*2+1), Point(an, an) );
 		dilate(frame, frame, element );
-		//erode(frame, frame, element );
+		erode(frame, frame, element );
 		
 		return frame;
 	}
 
 	vector<Vec4i> find_lines(Mat frame){
 		vector<Vec4i> lines;
-		HoughLinesP(frame, lines, 1, CV_PI/180, threshold_value, min_line_length, max_line_gap );
+		HoughLinesP(frame, lines, 3, CV_PI/180, threshold_value, min_line_length, max_line_gap );
 		return lines;
 	}
 
@@ -240,7 +263,7 @@ public:
 	}
 
 
-	Vec4i get_line(vector<Vec4i> lines)
+	Vec4i get_minLine(vector<Vec4i> lines)
 	{
 		int i_min = 0;
 		int y_pos = 0;
@@ -249,6 +272,8 @@ public:
 		// Find position of element with highest position of y coordinate
 		for (int i = 0; i < lines.size(); i++) 
 		{
+			//cout << lines[i] << endl;
+
 			y_pos = min(lines[i][3], lines[i][1]);
 			if (y_pos < y_min)
 			{
@@ -256,6 +281,8 @@ public:
 				i_min = i;
 			}
 		}
+		//cout << endl;
+
 
 		return lines[i_min];
 	}
@@ -268,33 +295,34 @@ public:
 		double length = 200;
 		double angle;
 
-		Vec4i l = get_line(lines);
+		Vec4i l = get_minLine(lines);
 
 		double dx = l[2]-l[0];
 		double dy = l[3]-l[1];
 
 		if(atan2(dy, dx) < 0)
 		{
-			angle = atan2(dy, dx) + 3.14159265;
+			angle = atan2(dy, dx) + PI;
 		} else 
 		{
 			angle = atan2(dy, dx);
 		}
-
+		// cout << "Angle: " << angle << endl;
 		angle = angle_memory.sliding_window(angle);
+		// cout << "Angle memory: " << angle << endl;
+		// cout << endl;
 		line( frame,
 					Point(width/2-length*cos(angle), height/2-length*sin(angle)),
 					Point(width/2+length*cos(angle), height/2+length*sin(angle)),
 					Scalar(255,255,0), 3, CV_AA);
-
 		return frame;
 	}	
 
 
 	float get_direction()
 	{
-		float angle = angle_memory.sliding_window(angle);
-		return angle; //- (3.14159265/4);
+		float angle = angle_memory.get_value();
+		return angle - (3.14159265/2);
 	}
 
 };
@@ -313,10 +341,12 @@ double distance_between_two_points(Vec4i& line)
 	return hypot(dy, dx);
 }
 
+
+
 int main(int argc, char **argv)
 {
-	ros::init(argc, argv, "pipe_detection");
-	ImageConverter ic;
+	ros::init(argc, argv, "path_marker");
+	ImageConverter ic(argc, argv);
 	ros::spin();
 	return 0;
 }

@@ -33,48 +33,49 @@ using namespace std;
 
 int main(int argc, char** argv)
 {
-    // Check if video source has been passed as a parameter
-    if(argv[1] == NULL){
-        std::cout << "Please provide a video source" << std::endl;
-        return 1;
-    }
-
     ros::init(argc, argv, "image_publisher");
     ros::NodeHandle nh;
     image_transport::ImageTransport it(nh);
-    image_transport::Publisher pub = it.advertise("camera/image", 1);
+    image_transport::Publisher pub = it.advertise("camera", 1);
 
     // Convert the passed as command line parameter index for the video device to an integer
-    std::istringstream video_sourceCmd(argv[1]);
-    int video_source;
-
+    int video_source = -1;
+    
     // Check if it is indeed a number
-    if(!(video_sourceCmd >> video_source)){
-        std::cout << "Wrong input" << std::endl;
-        return 1;
+    if(!(argv[1] == NULL)){
+        std::istringstream video_sourceCmd(argv[1]);
+        video_sourceCmd >> video_source;
     }
 
-
-
-    cv::VideoCapture cap(video_source);
+    cv::VideoCapture cap;
     string name = std::getenv("USER");
     switch(video_source){
+        case 0:
+        case 1:
         case 2:
-            cap.open("/home/"+name+"/Videos/pipe_dock/GOPR5068.MP4");
+            cap.open(video_source);
             break;
         case 3:
-            cap.open("/home/"+name+"/Videos/pipe_dock/real_pipe1.mp4");
+            cap.open("/home/"+name+"/Videos/GOPR1142.mp4");
             break;
         case 4:
             cap.open("/home/"+name+"/Videos/guide_posts.mp4");
             break;
-        case 5:
-            if(argv[2] == NULL){
-              std::cout << "Please provide a video source" << std::endl;
+        default:
+            if(argv[1] == NULL){
+                std::cout << "Please provide a video source" << std::endl;
+                std::cout << "0: video0" << std::endl;
+                std::cout << "1: video1" << std::endl;
+                std::cout << "2: video2" << std::endl;
+                std::cout << "3: ~/Videos/GOPR1142.mp4" << std::endl;
+                std::cout << "4: ~/Videos/guide_posts.mp4" << std::endl;
+                std::cout << "default: specify path to source \n" << std::endl;
+
+                std::cout << "Opening default camera at computer" << std::endl;
+                cap.open(-1);
               return 1;
             }
-            string video = argv[2];
-            cap.open("/home/"+name+"/Videos/"+video);
+            cap.open(argv[1]);
             break;
     }
     // Check if video device can be opened with the given index
