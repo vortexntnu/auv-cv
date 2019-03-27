@@ -6,7 +6,6 @@
 #include <std_msgs/Bool.h>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
 
 #include <iostream>
 #include <math.h>
@@ -17,7 +16,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <algorithm> 
-//#include "std_msgs/Int8.h"
 #include "std_msgs/Float32.h"
 
 
@@ -31,6 +29,7 @@ double distance_between_two_points(Vec4i& line);
 
 #define PI 3.14159265
 
+
 class ImageConverter
 {
 
@@ -41,13 +40,9 @@ private:
 	ros::Publisher detect_pub_;
 
 
-	SlidingWindowMemory angle_memory;
-	SlidingWindowMemory u_prime_memory;
-	SlidingWindowMemory v_prime_memory;
-	SlidingWindowMemory u_secondary_memory;
+	Angle_SlidingWindowMemory angle_memory;
+	Canny_SlidingWindowMemory canny_memory;
 
-	SlidingWindowMemory v_secondary_memory;
-	
 	char* src;
 
 	int canny_low;
@@ -101,6 +96,7 @@ public:
   	{
 		cv_bridge::CvImagePtr cv_ptr;
 		Mat frame;
+		Mat canny;
 		vector<Vec4i> lines;
 
 		try
@@ -119,18 +115,19 @@ public:
 
 		frame = blur(cv_ptr);
 
-		if (!strcmp(src, "/camera/front") || !strcmp(src, "/camera/under"))
+		if (!strcmp(src, "/camera/front") || !strcmp(src, "/camera/under")) // Regular camera
 		{
 			// HUE: low, high; SAT: low, high; Value: low, high
 			frame = convert_color(frame, 0, 72, 0, 255, 0, 255); 
 		}
-		else
+		else // Simulator
 		{
 			// HUE: low, high; SAT: low, high; Value: low, high
 			frame = convert_color(frame, 10, 30, 20, 80, 20, 80); 
 		}
 
-        frame = detect_edges(frame, 9);
+        canny = detect_edges(frame, 9);
+		frame = canny_memory.sliding_window(canny);
 		frame = dilate_erode(frame);
 
 		lines = find_lines(frame);
