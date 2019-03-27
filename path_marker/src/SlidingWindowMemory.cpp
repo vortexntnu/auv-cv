@@ -1,36 +1,77 @@
 #include <path_marker/SlidingWindowMemory.h>
 #include <iostream>
 #include <vector>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/opencv.hpp>
 
 using namespace std;
 
-SlidingWindowMemory::SlidingWindowMemory(){
-	sliding_window_memory_size = 15;
-	for(int i = 0; i<sliding_window_memory_size;i++)
+
+Angle_SlidingWindowMemory::Angle_SlidingWindowMemory(){
+	memory_size = 15;
+	for(int i = 0; i < memory_size; i++)
 	{
-		sliding_window_memory.push_back(-1);
+		angle_memory.push_back(-1);
 	}
 }
 
-double SlidingWindowMemory::sliding_window(double new_value){
-	for(int i = 1; i < sliding_window_memory.size(); i++){
-		sliding_window_memory.at(i-1) = sliding_window_memory.at(i);
+
+
+double Angle_SlidingWindowMemory::sliding_window(double new_value){
+	for(int i = 1; i < angle_memory.size(); i++){
+		angle_memory.at(i-1) = angle_memory.at(i);
 	}
-	sliding_window_memory.at(sliding_window_memory.size()-1) = new_value;
+	angle_memory.at(angle_memory.size()-1) = new_value;
 	double value_sum = 0;
 	double value_instances = 0;
-	for(int i = 0; i < sliding_window_memory.size(); i++){
-		if(sliding_window_memory.at(i)>-1){
-			value_sum += sliding_window_memory[i];
+	for(int i = 0; i < angle_memory.size(); i++){
+		if(angle_memory.at(i)>-1){
+			value_sum += angle_memory[i];
 			value_instances += 1;
 		}
 	}
+	
+	avg_angle = value_sum / value_instances;
 
-	sliding_avg_value = value_sum / value_instances;
-
-	return sliding_avg_value;
+	return avg_angle;
 }
 
-double SlidingWindowMemory::get_value(){
-	return sliding_avg_value;
+double Angle_SlidingWindowMemory::get_value(){
+	return avg_angle;
+}
+
+
+
+/****************************************
+* CANNY 								*
+****************************************/
+
+Canny_SlidingWindowMemory::Canny_SlidingWindowMemory()  
+{
+	memory_size = 3;
+	cv::Mat empty_canny;
+	for(int i = 0; i < memory_size; i++)
+	{
+		canny_memory.push_back(empty_canny);
+	}
+}
+
+
+template<typename T>
+void pop_front(std::vector<T>& vec)
+{
+    vec.erase(vec.begin());
+}
+
+
+cv::Mat Canny_SlidingWindowMemory::sliding_window(cv::Mat frame){
+	canny_memory.push_back(frame);
+	if (canny_memory.size() > 3) {
+		pop_front(canny_memory);
+	}
+
+	cv::Mat canny_added;
+	canny_sum = frame + canny_memory[0] + canny_memory[1];
+
+	return canny_sum;
 }
