@@ -1,7 +1,7 @@
 #include <ros/ros.h>
 #include <actionlib/client/simple_action_client.h>
 #include <actionlib/client/terminal_state.h>
-#include <actionlib_tutorials/AveragingAction.h>
+#include <gate_detect/GateCVAction.h>
 #include <boost/thread.hpp>
 
 void spinThread()
@@ -26,8 +26,10 @@ int main (int argc, char **argv)
   goal.samples = 100;
   ac.sendGoal(goal);
 
+
   //wait for the action to return
   bool finished_before_timeout = ac.waitForResult(ros::Duration(30.0));
+  ac.cancelAllGoals;
 
   if (finished_before_timeout)
   {
