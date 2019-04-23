@@ -11,10 +11,10 @@ void spinThread()
 
 int main (int argc, char **argv)
 {
-  ros::init(argc, argv, "test_averaging");
+  ros::init(argc, argv, "test_gate_detect");
 
   // create the action client
-  actionlib::SimpleActionClient<actionlib_tutorials::AveragingAction> ac("gate_detect");
+  actionlib::SimpleActionClient<gate_detect::GateCVAction> ac("gate_detect");
   boost::thread spin_thread(&spinThread);
 
   ROS_INFO("Waiting for action server to start.");
@@ -22,14 +22,14 @@ int main (int argc, char **argv)
 
   ROS_INFO("Action server started, sending goal.");
   // send a goal to the action
-  actionlib_tutorials::AveragingGoal goal;
-  goal.samples = 100;
+  gate_detect::GateCVGoal goal;
+  goal.samples = 1;
   ac.sendGoal(goal);
 
 
   //wait for the action to return
   bool finished_before_timeout = ac.waitForResult(ros::Duration(30.0));
-  ac.cancelAllGoals;
+  ac.cancelAllGoals();
 
   if (finished_before_timeout)
   {
