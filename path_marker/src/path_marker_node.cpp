@@ -123,7 +123,7 @@ public:
 		else // Simulator
 		{
 			// HUE: low, high; SAT: low, high; VALUE: low, high
-			frame = convert_color(frame, 10, 30, 20, 80, 20, 80); 
+			frame = convert_color(frame, 10, 50, 20, 255, 20, 255); 
 		}
 
         canny = detect_edges(frame, 9);

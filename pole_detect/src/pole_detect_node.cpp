@@ -30,7 +30,6 @@ static const std::string WINDOW2 = "Image window 2";
 // };
 
 /***** INPUT SELECTOR *****/
-//int src = CAMERA_FRONT;
 
 class ImageConverter
 {
@@ -38,20 +37,32 @@ class ImageConverter
   ros::NodeHandle n_;
   ImageTransport it_;
   Subscriber image_sub_;
-  ros::Publisher detect_pub_; 
+  ros::Publisher detect_pub_;
+  Mat cameraFrame, cameraFrameGrey, detected_edges, blury, red1, red2, red3;
+  double x1, x2, y1, y2,x11,x22,y11,y22;
+  Rect2d bbox;
+  Rect2d bbox_big;
+  vector<Rect2d> act_bbox;
+  pole_detect::CameraObjectInfo detected_2; 
 
   public:
     ImageConverter(int argc, char** argv)
       : it_(nh_)
     {
-
-      if((argv[1] == NULL))
-      {
-        std::cout << "Please provide a ROS topic to subscribe. The following are recomended:" << std::endl;
-        std::cout << "- /camera/front" << std::endl;
-        std::cout << "- /camera/under" << std::endl;
-        std::cout << "Subscribing to default topic of simulator: /manta/manta/cameraunder/camera_image" << std::endl;
-      }
+      // Subscribe to input video feed and publish output video feed
+      /*
+      int src = SIMULATOR;
+      switch(src) {
+      case CAMERA_FRONT: // 0
+        image_sub_ = it_.subscribe("/camera/front", 1, &ImageConverter::imageCb, this);
+        break;
+      case CAMERA_UNDER: // 1
+        image_sub_ = it_.subscribe("/camera/under", 1, &ImageConverter::imageCb, this);
+        break;
+      case SIMULATOR: // 2
+        image_sub_ = it_.subscribe("/manta/manta/camerafront/camera_image", 1, &ImageConverter::imageCb, this);
+        break;
+      }*/
 
 
       // Subscrive to input video feed and publish output video feed
@@ -78,6 +89,21 @@ class ImageConverter
         ROS_ERROR("cv_bridge exceptions: %s", e.what());
         return;
       }
+    
+      // Declaring variables
+
+      float width_pole = 0.4; // Height pixels of an object 1m from camera
+      float focal_length = 332.5;
+      float distance;
+      // Setting publishing variables to default values
+      detected_2.frame_height = cv_ptr->image.rows;//bbox.height;
+      detected_2.frame_width = cv_ptr->image.cols;//bbox.width;
+      detected_2.confidence = 0;
+      detected_2.pos_x = -1;
+      detected_2.pos_y = -1;	
+      detected_2.distance_to_pole = -1;
+  
+		
 
       // Declaring variables
       Mat cameraFrame, cameraFrameGrey, detected_edges, blury, red1, red2, red3;
@@ -96,8 +122,8 @@ class ImageConverter
 
       // Reading video stream and putting on a red mask
       cvtColor(cv_ptr->image, cameraFrameGrey, CV_BGR2HSV);
-      inRange(cameraFrameGrey, Scalar(0,120,120), Scalar(20,255,255), red1);
-      inRange(cameraFrameGrey, Scalar(160,120,120), Scalar(180,255,255), red2);
+      inRange(cameraFrameGrey, Scalar(0,10,10), Scalar(30,180,180), red1);
+      inRange(cameraFrameGrey, Scalar(150,10,10), Scalar(180,180,180), red2);
       addWeighted(red1, 1.0, red2, 1.0, 0.0, red3);
 
       // Finding contours
@@ -168,8 +194,54 @@ class ImageConverter
       cv::imshow(WINDOW2, cv_ptr->image);
       cv::waitKey(3);
 
-      // Publish message to /Camera_Object_Info
-      detect_pub_.publish(detected_2);
+    // If two different poles are detected, assumes it is a gate and returns the middle position between them
+		if (heights.size() > 0 && heights2.size() > 0) {
+			bbox = heights.end()[-1];
+			rectangle(cv_ptr->image, bbox.tl(), bbox.br(), Scalar(255,0,0),5);
+			x1 = bbox.tl().x;
+      y1 = bbox.tl().y;
+      x2 = bbox.br().x;
+      y2 = bbox.br().y;
+			bbox = heights2.end()[-1];
+			x11 = bbox.tl().x;
+      y11 = bbox.tl().y;
+      x22 = bbox.br().x;
+      y22 = bbox.br().y;
+			rectangle(cv_ptr->image, bbox.tl(), bbox.br(), Scalar(255,0,0),5);
+    	detected_2.confidence = 1;
+  	 	detected_2.pos_x = (x11+x22)/2 + (((x1+x2)/2 - (x11+x22)/2)/2);
+    	detected_2.pos_y = ((y11+y22)/2 + (((y1+y2)/2 - (y11-y22)/2)/2))+50;	
+			detected_2.confidence = 1;
+		}
+
+    // Calculating and publishing distance to object if object is in center of camera
+    if (detected_2.pos_x > (detected_2.frame_width/2 - 200) && detected_2.pos_x < (detected_2.frame_width/2 + 200)) {
+      if  (detected_2.pos_y > (detected_2.frame_height/2 - 200) && detected_2.pos_y < (detected_2.frame_height/2 + 200)) {
+        bbox = heights.end()[-1];
+        distance = (focal_length *  0.4) / (float)bbox.width;
+        detected_2.distance_to_pole = distance;
+
+        distance = round(distance*100) / 100.0;
+        std::string str = std::to_string(distance);
+        str.erase(str.length()-4,4);
+        str += "m";
+        cv::Point point(10,60);
+        cv::putText(cv_ptr->image, str, point, 3, 2,(0,255,255),1,1);
+      } 
+    }
+
+    
+
+
+
+
+    // Displaying imshow for testing
+		cv::imshow(OPENCV_WINDOW, red3);
+    cv::imshow(WINDOW2, cv_ptr->image);
+   	cv::waitKey(3);
+
+     // Publish message to /Camera_Object_Info
+		detect_pub_.publish(detected_2);
 	}
 
 	
