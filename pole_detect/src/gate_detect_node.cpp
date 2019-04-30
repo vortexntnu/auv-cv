@@ -14,7 +14,7 @@
 #include <sstream>
 #include <ros/ros.h>
 #include <dynamic_reconfigure/server.h>
-#include <pole_detect/PoleParamsConfig.h>
+#include <pole_detect/ColorParamsConfig.h>
 
 // Quality of life
 using namespace cv;
@@ -24,7 +24,7 @@ using namespace image_transport;
 static const std::string OPENCV_WINDOW = "Image window";
 static const std::string WINDOW2 = "Image window 2";
 
-class poleFinder
+class gateFinder
 {
   // Setting up ROS handles, subsribers and publishers	
   ros::NodeHandle nh_;
@@ -32,9 +32,9 @@ class poleFinder
   ImageTransport it_;
   Subscriber image_sub_;
   ros::Publisher detect_pub_;
-  // Dynamic reconfigure
-  dynamic_reconfigure::Server<pole_detect::PoleParamsConfig> server;
-  dynamic_reconfigure::Server<pole_detect::PoleParamsConfig>::CallbackType f;
+  //Dynamic reconfigure
+  dynamic_reconfigure::Server<pole_detect::ColorParamsConfig> server;
+  dynamic_reconfigure::Server<pole_detect::ColorParamsConfig>::CallbackType f;
   // Declaring variables
   Mat cameraFrame, detected_edges, blury, red_temp1, red_temp2, red; //frames
   double x1, x2, y1, y2,x11,x22,y11,y22; //cordinates
@@ -42,31 +42,26 @@ class poleFinder
   vector<Rect2d> act_bbox; //Vector with bounding boxes
   pole_detect::CameraObjectInfo detected; //Message to be published
   int minhue1,maxhue1,minval1,maxval1,minsat1,maxsat1,minhue2,maxhue2,minval2,maxval2,minsat2,maxsat2;
-  float distance;
-  //-------------- HAVE TO BE TUNED ---------
-  float width_pole = 0.4; // Height pixels of an object 1m from camera
-  float focal_length = 332.5; // F = (PxD) / W (P - Pixle width, D - Distance, W - width of pole)
-  
+
+
   public:
-
-
-
-     // Constructor runs run() function
-    poleFinder(int argc, char** argv)
+    
+    // Constructor runs run() function
+     gateFinder(int argc, char** argv)
       : it_(nh_)
     {
       // Subscribe to input video feed and publish output video feed
-      image_sub_ = it_.subscribe("/manta/manta/camerafront/camera_image", 1, &poleFinder::run, this);
+      image_sub_ = it_.subscribe("/manta/manta/camerafront/camera_image", 1, &gateFinder::run, this);
       detect_pub_ = n_.advertise<pole_detect::CameraObjectInfo>("pole_midpoint",1000);
       cv::namedWindow(OPENCV_WINDOW);
     }
-    ~poleFinder()
+    ~gateFinder()
     {
       cv::destroyWindow(OPENCV_WINDOW);
     }
-
+    
     // Dynamic tuning of color filter
-    void configCallback(const pole_detect::PoleParamsConfig &config, uint32_t level){
+    void configCallback(const pole_detect::ColorParamsConfig &config, uint32_t level){
         ROS_INFO_STREAM("Info");
           minhue1 = config.minhue1;
           maxhue1 = config.maxhue1;
@@ -90,7 +85,7 @@ class poleFinder
       detected.pos_y = -1;
     }
 
-     // Red filter, blur and egde detection
+    // Red filter, blur and egde detection
     void redFilterAndEgde(cv_bridge::CvImagePtr cv_ptr) {
       cvtColor(cv_ptr->image, cameraFrame, CV_BGR2HSV);
       inRange(cameraFrame, Scalar(minhue1,minval1,minsat1), Scalar(maxhue1,maxval1,maxsat1), red_temp1);
@@ -103,6 +98,8 @@ class poleFinder
     void Contours(cv_bridge::CvImagePtr cv_ptr) {
       // Declearing necesarry variables  
       vector<vector<Point> > contours;
+      vector<Rect2d> heights;
+      vector<Rect2d> heights2;
       findContours(detected_edges, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
       int height = 0; 
 
@@ -111,40 +108,54 @@ class poleFinder
         bbox = boundingRect(contours[i]);
         if ( bbox.height > height ) {
           height = bbox.height;
-          bbox_big = bbox;
+          heights.push_back(bbox);
         }
       }
-    }
-
-    void findDistance(cv_bridge::CvImagePtr cv_ptr) {
-        detected.confidence = 0.5;
-        bbox = bbox_big;
-        detected.pos_x = (bbox.tl().x + bbox.br().x) / 2;
-        detected.pos_y = (bbox.tl().y + bbox.br().y) / 2;
-        rectangle(cv_ptr->image, bbox.tl(), bbox.br(), Scalar(0,255,0),5);
-        if (detected.pos_x > (detected.frame_width/2 - 200) && detected.pos_x < (detected.frame_width/2 + 200)) {
-            if  (detected.pos_y > (detected.frame_height/2 - 200) && detected.pos_y < (detected.frame_height/2 + 200)) {
-                bbox = bbox_big;
-                distance = (focal_length *  0.4) / (float)bbox.width;
-                detected.distance_to_pole = distance;
-
-                distance = round(distance*100) / 100.0;
-                std::string str = std::to_string(distance);
-                str.erase(str.length()-4,4);
-                str += "m";
-                cv::Point point(10,60);
-                cv::putText(cv_ptr->image, str, point, 3, 2,(0,255,255),1,1);
-            }  
+      if (heights.size() > 0) {
+        bbox_big = heights.end()[-1];
+        int center = (bbox_big.tl().x + bbox_big.br().x)/2;
+        height = 0;
+        for (int i = 0; i < contours.size(); i++) {
+          bbox = boundingRect(contours[i]);
+          int center2 = (bbox.tl().x + bbox.br().x)/2;
+          if ((center2 > center + 25 || center2 < center - 25) && !bbox_big.contains(bbox.tl()) && !bbox_big.contains(bbox.br())) {
+            if (bbox.height > height) {
+              heights2.push_back(bbox);
+            }
+          } 
         }
+      }
+      // If two contours are found, that are not on top of each other, update message with information
+      if (heights.size() > 0 && heights2.size() > 0) {
+        bbox = heights.end()[-1];
+        rectangle(cv_ptr->image, bbox.tl(), bbox.br(), Scalar(255,0,0),5);
+        x1 = bbox.tl().x;
+        y1 = bbox.tl().y;
+        x2 = bbox.br().x;
+        y2 = bbox.br().y;
+        bbox = heights2.end()[-1];
+        x11 = bbox.tl().x;
+        y11 = bbox.tl().y;
+        x22 = bbox.br().x;
+        y22 = bbox.br().y;
+        rectangle(cv_ptr->image, bbox.tl(), bbox.br(), Scalar(255,0,0),5);
+        detected.confidence = 1;
+        detected.pos_x = (x11+x22)/2 + (((x1+x2)/2 - (x11+x22)/2)/2);
+        detected.pos_y = ((y11+y22)/2 + (((y1+y2)/2 - (y11-y22)/2)/2))+50;	
+       
+      }
     }
-
+    
     // Displays windows on screen
     void drawOnImage(cv_bridge::CvImagePtr cv_ptr) {
         cv::imshow(OPENCV_WINDOW, red);
         cv::imshow(WINDOW2, cv_ptr->image);
    	    cv::waitKey(3);
     }
+   
+
     
+
     void run(const sensor_msgs::ImageConstPtr& msg)
     // Reading the image to cv_ptr
     {
@@ -163,19 +174,17 @@ class poleFinder
       init_msg(cv_ptr);
       redFilterAndEgde(cv_ptr);
       Contours(cv_ptr);
-      findDistance(cv_ptr);
       drawOnImage(cv_ptr);
-      f = boost::bind(&poleFinder::configCallback, this, _1, _2);
+      f = boost::bind(&gateFinder::configCallback, this, _1, _2);
       server.setCallback(f);
       detect_pub_.publish(detected);
     }
-
 };
 
 int main(int argc, char** argv)
 {
-  ros::init(argc, argv, "pole_detect");
-  poleFinder ic(argc, argv);
+  ros::init(argc, argv, "gate_detect");
+  gateFinder ic(argc, argv);
   ros::spin();
   return 0;
 }
