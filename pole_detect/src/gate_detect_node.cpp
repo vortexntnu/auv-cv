@@ -52,7 +52,7 @@ class gateFinder
     {
       // Subscribe to input video feed and publish output video feed
       image_sub_ = it_.subscribe("/manta/manta/camerafront/camera_image", 1, &gateFinder::run, this);
-      detect_pub_ = n_.advertise<pole_detect::CameraObjectInfo>("pole_midpoint",1000);
+      detect_pub_ = n_.advertise<pole_detect::CameraObjectInfo>("gate_midpoint",1000);
       cv::namedWindow(OPENCV_WINDOW);
     }
     ~gateFinder()
@@ -142,6 +142,9 @@ class gateFinder
         detected.confidence = 1;
         detected.pos_x = (x11+x22)/2 + (((x1+x2)/2 - (x11+x22)/2)/2);
         detected.pos_y = ((y11+y22)/2 + (((y1+y2)/2 - (y11-y22)/2)/2))+50;	
+        if (x1 < detected.frame_width * 0.1 || x2 > detected.frame_width - detected.frame_width * 0.1 || x11 < detected.frame_width * 0.1 || x22 > detected.frame_width - detected.frame_width * 0.1) {
+          detected.confidence = 0.5;
+        }
        
       }
     }
@@ -178,6 +181,7 @@ class gateFinder
       f = boost::bind(&gateFinder::configCallback, this, _1, _2);
       server.setCallback(f);
       detect_pub_.publish(detected);
+      cout << detected.confidence << endl;
     }
 };
 
