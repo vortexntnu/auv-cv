@@ -62,7 +62,7 @@ class gateFinder
     
     // Dynamic tuning of color filter
     void configCallback(const pole_detect::ColorParamsConfig &config, uint32_t level){
-        ROS_INFO_STREAM("Info");
+       
           minhue1 = config.minhue1;
           maxhue1 = config.maxhue1;
           minval1 = config.minval1;
@@ -181,7 +181,7 @@ class gateFinder
       f = boost::bind(&gateFinder::configCallback, this, _1, _2);
       server.setCallback(f);
       detect_pub_.publish(detected);
-      cout << detected.confidence << endl;
+     
     }
 };
 
