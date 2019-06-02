@@ -1,5 +1,7 @@
+[![Build Status](https://travis-ci.com/vortexntnu/auv-cv.svg?branch=master)](https://travis-ci.com/vortexntnu/auv-cv)
 # AUV-CV
 Download this repo to your src-folder in your catkin workspace.
+
 
 ## Installing dependencies
 OpenCV >= 3.4.0: https://github.com/opencv/opencv
