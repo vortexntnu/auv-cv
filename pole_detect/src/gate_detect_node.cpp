@@ -10,7 +10,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include "std_msgs/Bool.h"
-#include "CameraObjectInfo.h"
+#include "vortex_msgs/CameraObjectInfo.h"
 #include <sstream>
 #include <ros/ros.h>
 #include <dynamic_reconfigure/server.h>
@@ -40,7 +40,7 @@ class gateFinder
   double x1, x2, y1, y2,x11,x22,y11,y22; //cordinates
   Rect2d bbox, bbox_big; //Bounding boxes
   vector<Rect2d> act_bbox; //Vector with bounding boxes
-  pole_detect::CameraObjectInfo detected; //Message to be published
+  vortex_msgs::CameraObjectInfo detected; //Message to be published
   int minhue1,maxhue1,minval1,maxval1,minsat1,maxsat1,minhue2,maxhue2,minval2,maxval2,minsat2,maxsat2;
 
 
@@ -51,8 +51,8 @@ class gateFinder
       : it_(nh_)
     {
       // Subscribe to input video feed and publish output video feed
-      image_sub_ = it_.subscribe("/manta/manta/camerafront/camera_image", 1, &gateFinder::run, this);
-      detect_pub_ = n_.advertise<pole_detect::CameraObjectInfo>("gate_midpoint",1000);
+      image_sub_ = it_.subscribe("/image", 1, &gateFinder::run, this);
+      detect_pub_ = n_.advertise<vortex_msgs::CameraObjectInfo>("gate_midpoint",1000);
       cv::namedWindow(OPENCV_WINDOW);
     }
     ~gateFinder()
@@ -63,18 +63,18 @@ class gateFinder
     // Dynamic tuning of color filter
     void configCallback(const pole_detect::ColorParamsConfig &config, uint32_t level){
        
-          minhue1 = config.minhue1;
-          maxhue1 = config.maxhue1;
-          minval1 = config.minval1;
-          maxval1 = config.maxval1;
-          minsat1 = config.minsat1;
-          maxsat1 = config.maxsat1;
-          minhue2 = config.minhue2;
-          maxhue2 = config.maxhue2;
-          minval2 = config.minval2;
-          maxval2 = config.maxval2;
-          minsat2 = config.minsat2;
-          maxsat2 = config.maxsat2;
+          minhue1 = 0;//config.minhue1;
+          maxhue1 = 5;//config.maxhue1;
+          minval1 = 80;//config.minval1;
+          maxval1 = 255;//config.maxval1;
+          minsat1 = 100;//config.minsat1;
+          maxsat1 = 255;//config.maxsat1;
+          minhue2 = 175;//config.minhue2;
+          maxhue2 = 180;//config.maxhue2;
+          minval2 = 0;//config.minval2;
+          maxval2 = 255;//config.maxval2;
+          minsat2 = 100;//config.minsat2;
+          maxsat2 = 255;//config.maxsat2;
     }
     // Setting message values to a default
     void init_msg(cv_bridge::CvImagePtr cv_ptr) {
@@ -88,8 +88,8 @@ class gateFinder
     // Red filter, blur and egde detection
     void redFilterAndEgde(cv_bridge::CvImagePtr cv_ptr) {
       cvtColor(cv_ptr->image, cameraFrame, CV_BGR2HSV);
-      inRange(cameraFrame, Scalar(minhue1,minval1,minsat1), Scalar(maxhue1,maxval1,maxsat1), red_temp1);
-      inRange(cameraFrame, Scalar(minhue2,minval2,minsat2), Scalar(maxhue2,maxval2,maxsat2), red_temp2);
+      inRange(cameraFrame, Scalar(minhue1,minsat1,minval1), Scalar(maxhue1,maxsat1,maxval1), red_temp1);
+      inRange(cameraFrame, Scalar(minhue2,minsat2,minval2), Scalar(maxhue2,maxsat2,maxval2), red_temp2);
       addWeighted(red_temp1, 1.0, red_temp2, 1.0, 0.0, red);
       GaussianBlur(red, blury, Size(9,9),0,0);
       Canny(blury, detected_edges, 10, 50, 3);

@@ -56,7 +56,7 @@ class poleFinder
       : it_(nh_)
     {
       // Subscribe to input video feed and publish output video feed
-      image_sub_ = it_.subscribe("/manta/manta/camerafront/camera_image", 1, &poleFinder::run, this);
+      image_sub_ = it_.subscribe("/image", 1, &poleFinder::run, this);
       detect_pub_ = n_.advertise<pole_detect::CameraObjectInfo>("pole_midpoint",1000);
       cv::namedWindow(OPENCV_WINDOW);
     }
@@ -93,8 +93,8 @@ class poleFinder
      // Red filter, blur and egde detection
     void redFilterAndEgde(cv_bridge::CvImagePtr cv_ptr) {
       cvtColor(cv_ptr->image, cameraFrame, CV_BGR2HSV);
-      inRange(cameraFrame, Scalar(minhue1,minval1,minsat1), Scalar(maxhue1,maxval1,maxsat1), red_temp1);
-      inRange(cameraFrame, Scalar(minhue2,minval2,minsat2), Scalar(maxhue2,maxval2,maxsat2), red_temp2);
+      inRange(cameraFrame, Scalar(minhue1,minsat1,minval1), Scalar(maxhue1,maxsat1,maxval1), red_temp1);
+      inRange(cameraFrame, Scalar(minhue2,minsat2,minval2), Scalar(maxhue2,maxsat2,maxval2), red_temp2);
       addWeighted(red_temp1, 1.0, red_temp2, 1.0, 0.0, red);
       GaussianBlur(red, blury, Size(9,9),0,0);
       Canny(blury, detected_edges, 10, 50, 3);
