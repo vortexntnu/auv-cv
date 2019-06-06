@@ -64,16 +64,16 @@ class gateFinder
     void configCallback(const pole_detect::ColorParamsConfig &config, uint32_t level){
        
           minhue1 = 0;//config.minhue1;
-          maxhue1 = 5;//config.maxhue1;
-          minval1 = 80;//config.minval1;
+          maxhue1 = 7;//config.maxhue1;
+          minval1 = 60;//config.minval1;
+          minsat1 = 130;//config.minsat1;
           maxval1 = 255;//config.maxval1;
-          minsat1 = 100;//config.minsat1;
           maxsat1 = 255;//config.maxsat1;
           minhue2 = 175;//config.minhue2;
           maxhue2 = 180;//config.maxhue2;
-          minval2 = 0;//config.minval2;
+          minval2 = 60;//config.minval2;
           maxval2 = 255;//config.maxval2;
-          minsat2 = 100;//config.minsat2;
+          minsat2 = 130;//config.minsat2;
           maxsat2 = 255;//config.maxsat2;
     }
     // Setting message values to a default
@@ -90,6 +90,14 @@ class gateFinder
       cvtColor(cv_ptr->image, cameraFrame, CV_BGR2HSV);
       inRange(cameraFrame, Scalar(minhue1,minsat1,minval1), Scalar(maxhue1,maxsat1,maxval1), red_temp1);
       inRange(cameraFrame, Scalar(minhue2,minsat2,minval2), Scalar(maxhue2,maxsat2,maxval2), red_temp2);
+      int an = 5;
+      int element_shape = MORPH_RECT;
+      Mat element = getStructuringElement(element_shape, Size(an*2+1, an*2+1), Point(an, an) );
+      dilate(red_temp1, red_temp1, element );
+      dilate(red_temp2, red_temp2, element );
+      //erode(red_temp1, red_temp1, element );
+      //erode(red_temp2, red_temp2, element );
+      //erode(blury, blury, element );
       addWeighted(red_temp1, 1.0, red_temp2, 1.0, 0.0, red);
       GaussianBlur(red, blury, Size(9,9),0,0);
       Canny(blury, detected_edges, 10, 50, 3);
