@@ -53,11 +53,11 @@ class gateFinder
       // Subscribe to input video feed and publish output video feed
       image_sub_ = it_.subscribe("/image", 1, &gateFinder::run, this);
       detect_pub_ = n_.advertise<vortex_msgs::CameraObjectInfo>("gate_midpoint",1000);
-      cv::namedWindow(OPENCV_WINDOW);
+      //cv::namedWindow(OPENCV_WINDOW);
     }
     ~gateFinder()
     {
-      cv::destroyWindow(OPENCV_WINDOW);
+      //cv::destroyWindow(OPENCV_WINDOW);
     }
     
     // Dynamic tuning of color filter
@@ -66,14 +66,14 @@ class gateFinder
           minhue1 = 0;//config.minhue1;
           maxhue1 = 7;//config.maxhue1;
           minval1 = 60;//config.minval1;
-          minsat1 = 130;//config.minsat1;
+          minsat1 = 70;//config.minsat1;
           maxval1 = 255;//config.maxval1;
           maxsat1 = 255;//config.maxsat1;
           minhue2 = 175;//config.minhue2;
           maxhue2 = 180;//config.maxhue2;
           minval2 = 60;//config.minval2;
           maxval2 = 255;//config.maxval2;
-          minsat2 = 130;//config.minsat2;
+          minsat2 = 70;//config.minsat2;
           maxsat2 = 255;//config.maxsat2;
     }
     // Setting message values to a default
@@ -159,9 +159,9 @@ class gateFinder
     
     // Displays windows on screen
     void drawOnImage(cv_bridge::CvImagePtr cv_ptr) {
-        cv::imshow(OPENCV_WINDOW, red);
-        cv::imshow(WINDOW2, cv_ptr->image);
-   	    cv::waitKey(3);
+        //cv::imshow(OPENCV_WINDOW, red);
+        //cv::imshow(WINDOW2, cv_ptr->image);
+   	//cv::waitKey(3);
     }
    
 
