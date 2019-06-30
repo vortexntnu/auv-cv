@@ -17,8 +17,7 @@
 #include <stdlib.h>
 #include <algorithm> 
 #include "std_msgs/Float32.h"
-//#include <Center.h>
-
+#include "locate_marker/Center.h"
 
 
 using namespace std;
@@ -69,8 +68,10 @@ public:
 
 		// Subscrive to input video feed and publish output video feed
 		image_sub_ = it_.subscribe("image", 1, &ImageConverter::imageCb, this);
-		detect_pub_ = nh_.advertise<std_msgs::Float32>("path_angle", 1000);
-
+		// detect_pub_ = nh_.advertise<std_msgs::Float32>("path_angle", 1000);
+		detect_pub_ = nh_.advertise<locate_marker::Center>("marker_location", 1000);
+ 
+		locate_marker::Center msg;
 
 		cv::namedWindow(OPENCV_WINDOW, WINDOW_NORMAL);
 
@@ -153,6 +154,9 @@ public:
 			cx = bbox.x + bbox.width/2; 
 			cy = bbox.y + bbox.height/2;
 			rectangle(frame, bbox.tl(), bbox.br(), Scalar(0,255,0),5);
+
+			// msg.center_x = cx;
+			// msg.center_y = cy;
 		}
 
 		// Update GUI Window
@@ -164,13 +168,14 @@ public:
 		****************/
 
 		// Output modified video stream
-		std_msgs::Float32 direction;
+		// std_msgs::Float32 direction;
 
 		// if (lines.size() > 0)
 		// 	direction.data = get_direction();
 
-		//ROS_INFO("%f", direction.data);
-    	detect_pub_.publish(direction);
+		//ROS_INFO("%f", msg.data);
+		// detect_pub_.publish(direction);
+    	detect_pub_.publish(msg);
 		
   	}
 
