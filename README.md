@@ -1,22 +1,26 @@
 [![Build Status](https://travis-ci.com/vortexntnu/auv-cv.svg?branch=master)](https://travis-ci.com/vortexntnu/auv-cv)
 # AUV-CV
-Download this repo to your src-folder in your catkin workspace.
-
-
-## Installing dependencies
-OpenCV >= 3.4.0: https://github.com/opencv/opencv
-
-ROS - Kinetic Kame: http://wiki.ros.org/kinetic
-
-```sh
-sudo apt install ros-kinetic-camera-info-manager
-sudo apt install ros-kinetic-cv-bridge
-```
-
-## Competition
 The following directories are designed for AUV competition Robosub by Robonation. https://www.robonation.org/competition/robosub.
 
 The taskes from 2018 can be found here: https://www.robonation.org/sites/default/files/2018%20RoboSub_2018%20Mission%20and%20Scoring_v01.50.pdf.
+
+Clone it to the src folder of your workspace
+
+## Dependencies 
+
+Vortex_msgs: https://github.com/vortexntnu/vortex_msgs or https://github.com/vortexntnu/manta-auv
+
+ROS-kinetic: http://wiki.ros.org/kinetic/Installation/Ubuntu
+
+If you did not do the desktop-full installation of ros-kinetic you might have to install the following packages manually
+```sh
+sudo apt install ros-kinetic-camera-info-manager
+sudo apt install ros-kinetic-cv-bridge
+sudo apt install ros-kinetic-opencv3
+sudo apt install ros-kinetic-image-view
+sudo apt install ros-kinetic-image-transport
+
+```
 
 ## ROS nodes
 
