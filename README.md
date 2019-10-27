@@ -72,7 +72,7 @@ Usage:
 ```bash
 $ roslaunch pole_detect pole_detect.launch topic:=[topic]
 ```
-**NB!** Theese will not work well without tuning the color parameters to your enviornment.
+**NB!** Theese will not work well without tuning the color parameters to your enviornment. Bruk rosrun rqt_reconfigure rqt_reconfigure, velg hvilken node og forandre HSV verdiene live. 
 
 Topics should be spesified for `[topic]`. Any topic publishing a video may be spesified.
 If no topic is provided, then pole_detect will subscribe to default topic of simulator: `/manta/manta/cameraunder/camera_image`.
