@@ -171,9 +171,10 @@ class gateFinder
     
     // Displays windows on screen
     void drawOnImage(cv_bridge::CvImagePtr cv_ptr) {
-        //cv::imshow(OPENCV_WINDOW, red);
-        //cv::imshow(WINDOW2, cv_ptr->image);
-   	//cv::waitKey(3);
+        
+        cv::imshow(WINDOW2, cv_ptr->image);
+   	cv::waitKey(3);
+        
     }
    
 
