@@ -61,13 +61,18 @@ $ rosrun image_view image_view image:=<image topic> [image transport type]
 ```
 
 ### Pole_detect
-Task 1 of the competition. Uses color filtering together with contour detection by OpenCV to capture the pole(s) of the gate. 
+This package have two nodes. The first is Task 1 of the competition. Uses color filtering together with contour detection by OpenCV to capture the pole(s) of the gate. 
 Publishes the midpoint of the detected pole(s) on the topic: `pole_midpoint`.
-
 Usage: 
+```bash
+$ roslaunch pole_detect gate_detect.launch topic:=[topic]
+```
+The second is detecting a pole and showing distance to it granted that the real-object size is known. 
+Usage:
 ```bash
 $ roslaunch pole_detect pole_detect.launch topic:=[topic]
 ```
+**NB!** Theese will not work well without tuning the color parameters to your enviornment.
 
 Topics should be spesified for `[topic]`. Any topic publishing a video may be spesified.
 If no topic is provided, then pole_detect will subscribe to default topic of simulator: `/manta/manta/cameraunder/camera_image`.
