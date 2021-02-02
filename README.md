@@ -10,15 +10,15 @@ Clone it to the src folder of your workspace
 
 Vortex_msgs: https://github.com/vortexntnu/vortex_msgs or https://github.com/vortexntnu/manta-auv
 
-ROS-kinetic: http://wiki.ros.org/kinetic/Installation/Ubuntu
+ROS-melodic: http://wiki.ros.org/melodic/Installation/Ubuntu
 
-If you did not do the desktop-full installation of ros-kinetic you might have to install the following packages manually
+If you did not do the desktop-full installation of ros-melodic you might have to install the following packages manually
 ```sh
-sudo apt install ros-kinetic-camera-info-manager
-sudo apt install ros-kinetic-cv-bridge
-sudo apt install ros-kinetic-opencv3
-sudo apt install ros-kinetic-image-view
-sudo apt install ros-kinetic-image-transport
+sudo apt install ros-melodic-camera-info-manager
+sudo apt install ros-melodic-cv-bridge
+sudo apt install ros-melodic-opencv3
+sudo apt install ros-melodic-image-view
+sudo apt install ros-melodic-image-transport
 
 ```
 
