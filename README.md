@@ -1,5 +1,9 @@
 [![Build Status](https://travis-ci.com/vortexntnu/auv-cv.svg?branch=master)](https://travis-ci.com/vortexntnu/auv-cv)
 # AUV-CV
+
+# This repository is archived since we wish to move everything related to CV/object detection into Vortex-AUV
+
+
 The following directories are designed for AUV competition Robosub by Robonation. https://www.robonation.org/competition/robosub.
 
 The taskes from 2018 can be found here: https://www.robonation.org/sites/default/files/2018%20RoboSub_2018%20Mission%20and%20Scoring_v01.50.pdf.
